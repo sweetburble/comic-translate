@@ -385,7 +385,7 @@ class ImageViewer(QtWidgets.QGraphicsView):
             max(0, min(point.y(), self._photo.pixmap().height()))
         )
 
-    def select_rectangle(self, rect: QtWidgets.QGraphicsRectItem):
+    def select_rectangle(self, rect: MovableRectItem):
         self.deselect_all()
         rect.selected = True
         rect.setBrush(QtGui.QBrush(QtGui.QColor(255, 0, 0, 100)))  # Transparent red
@@ -677,6 +677,7 @@ class ImageViewer(QtWidgets.QGraphicsView):
             text_item = TextBlockItem(
                 text=text_block['text'],
                 parent_item= self._photo,
+                text_block=text_block['block'],
                 font_family=text_block['font_family'],
                 font_size=text_block['font_size'],
                 render_color=text_block['text_color'],
@@ -687,7 +688,6 @@ class ImageViewer(QtWidgets.QGraphicsView):
                 bold=text_block['bold'],
                 italic=text_block['italic'],
                 underline=text_block['underline'],
-                text_block=text_block['block']
             )
             text_item.setPos(QtCore.QPointF(*text_block['position']))
             text_item.setRotation(text_block['rotation'])
@@ -704,6 +704,7 @@ class ImageViewer(QtWidgets.QGraphicsView):
         for item in self._text_items:
             text_items_state.append({
                 'text': item.toHtml(),
+                'block': item.text_block,
                 'font_family': item.font_family,
                 'font_size': item.font_size,
                 'text_color': item.text_color,
@@ -717,7 +718,6 @@ class ImageViewer(QtWidgets.QGraphicsView):
                 'position': (item.pos().x(), item.pos().y()),
                 'rotation': item.rotation(),
                 'scale': item.scale(),
-                'block': item.text_block
             })
 
         return {
