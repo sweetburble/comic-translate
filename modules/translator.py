@@ -89,7 +89,7 @@ class Translator:
             model=model,
             messages=message,
             temperature=1,
-            max_tokens=1000,
+            max_tokens=5000,
         )
 
         translated = response.choices[0].message.content
@@ -111,7 +111,7 @@ class Translator:
             system = system_prompt,
             messages=message,
             temperature=1,
-            max_tokens=1000,
+            max_tokens=5000,
         )
         translated = response.content[0].text
         return translated
@@ -122,7 +122,7 @@ class Translator:
             "temperature": 1,
             "top_p": 0.95,
             "top_k": 0,
-            "max_output_tokens": 1000,
+            "max_output_tokens": 5000,
             }
         
         safety_settings = [
