@@ -33,7 +33,6 @@ class ImageSaveRenderer:
             text_item = TextBlockItem(
                 text=text_block['text'],
                 parent_item = self.pixmap_item,
-                text_block=text_block['block'],
                 font_family=text_block['font_family'],
                 font_size=text_block['font_size'],
                 render_color=text_block['text_color'],
@@ -45,6 +44,9 @@ class ImageSaveRenderer:
                 italic=text_block['italic'],
                 underline=text_block['underline'],
             )
+
+            text_item.set_text(text_block['text'], text_block['width'])
+            text_item.setTransformOriginPoint(QtCore.QPointF(*text_block['transform_origin']))
             text_item.setPos(QtCore.QPointF(*text_block['position']))
             text_item.setRotation(text_block['rotation'])
             text_item.setScale(text_block['scale'])
