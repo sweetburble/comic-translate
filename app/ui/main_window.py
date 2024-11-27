@@ -41,7 +41,7 @@ supported_target_languages = [
 "English", "Korean", "Japanese", "French", "Simplified Chinese",
 "Traditional Chinese", "Russian", "German", "Dutch", "Spanish", 
 "Italian", "Turkish", "Polish", "Portuguese", "Brazilian Portuguese",
-"Thai", "Vietnamese"
+"Thai", "Vietnamese", "Hungarian", "Indonesian",  "Finnish"
 ]
 
 
@@ -89,7 +89,10 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
             self.tr("Portuguese"): "Portuguese",
             self.tr("Brazilian Portuguese"): "Brazilian Portuguese",
             self.tr("Thai"): "Thai",
-            self.tr("Vietnamese"): "Vietnamese"
+            self.tr("Vietnamese"): "Vietnamese",
+            self.tr("Indonesian"): "Indonesian",
+            self.tr("Hungarian"): "Hungarian",
+            self.tr("Finnish"): "Finnish",
         }
         # Create reverse mapping
         self.reverse_lang_mapping = {v: k for k, v in self.lang_mapping.items()}
@@ -459,7 +462,7 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
 
         # Pan Button
         self.pan_button = self.create_tool_button(svg = "pan_tool.svg", checkable = True)
-        self.pan_button.setToolTip("Pan Image")
+        self.pan_button.setToolTip(self.tr("Pan Image"))
         self.pan_button.clicked.connect(self.toggle_pan_tool)
         self.tool_buttons['pan'] = self.pan_button
 
@@ -475,12 +478,12 @@ class ComicTranslateUI(QtWidgets.QMainWindow):
         box_tools_lay = QtWidgets.QHBoxLayout()
 
         self.box_button = self.create_tool_button(svg = "select.svg", checkable=True)
-        self.box_button.setToolTip("Draw or Select Text Boxes")
+        self.box_button.setToolTip(self.tr("Draw or Select Text Boxes"))
         self.box_button.clicked.connect(self.toggle_box_tool)
         self.tool_buttons['box'] = self.box_button
 
         self.delete_button = self.create_tool_button(svg = "trash_line.svg", checkable=False)
-        self.delete_button.setToolTip("Delete Selected Box")
+        self.delete_button.setToolTip(self.tr("Delete Selected Box"))
 
         self.clear_rectangles_button = self.create_tool_button(svg = "clear-outlined.svg")
         self.clear_rectangles_button.setToolTip(self.tr("Remove all the Boxes on the Image"))
