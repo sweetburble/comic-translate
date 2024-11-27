@@ -120,7 +120,7 @@ class ComicTranslate(ComicTranslateUI):
         self.save_as_project_button.clicked.connect(self.thread_save_as_project)
 
         self.drag_browser.sig_files_changed.connect(self.thread_load_images)
-       
+
         self.manual_radio.clicked.connect(self.manual_mode_selected)
         self.automatic_radio.clicked.connect(self.batch_mode_selected)
 
