@@ -2,6 +2,8 @@ import os
 import shutil
 import tempfile
 import string
+from datetime import datetime
+from typing import List
 from .archives import extract_archive
 
 class FileHandler:
@@ -9,10 +11,10 @@ class FileHandler:
         self.file_paths = []
         self.archive_info = []
     
-    def prepare_files(self, file_paths: list[str]):
+    def prepare_files(self):
         all_image_paths = []
         
-        for path in file_paths:
+        for path in self.file_paths:
             if path.lower().endswith(('.cbr', '.cbz', '.cbt', '.cb7', 
                                       '.zip', '.rar', '.7z', '.tar',
                                       '.pdf', '.epub')):
@@ -34,10 +36,10 @@ class FileHandler:
                 path = self.sanitize_and_copy_files([path])[0]
                 all_image_paths.append(path)
         
-        self.file_paths.extend(all_image_paths)
-        return all_image_paths
+        self.file_paths = all_image_paths
+        return self.file_paths
 
-    def sanitize_and_copy_files(self, file_paths: list[str]):
+    def sanitize_and_copy_files(self, file_paths):
         sanitized_paths = []
         for index, image_path in enumerate(file_paths):
             if not image_path.isascii():
