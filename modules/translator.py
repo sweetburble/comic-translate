@@ -141,13 +141,18 @@ class Translator:
         - 雪民 : 유키민
         """
 
+    def get_deepseek_translation(self, user_prompt: str, system_prompt: str):
+        message = [
+            {"role": "system", "content": [{"type": "text", "text": system_prompt}]},
+            {"role": "user", "content": [{"type": "text", "text": user_prompt}]}
+        ]
+
         response = self.client.chat.completions.create(
             model="deepseek-chat",
             messages=message,
             temperature=0.7,
             max_tokens=1000,
         )
-
         translated = response.choices[0].message.content
         return translated
     
