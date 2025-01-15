@@ -14,3 +14,4 @@ env/
 venv/
 comic-translate-venv/
 .idea
+modules/sys_prompt.py
