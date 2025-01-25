@@ -63,8 +63,8 @@ class SettingsPage(QtWidgets.QWidget):
             'export_inpainted_image': self.ui.inpainted_image_checkbox.isChecked(),
             'save_as': {}
         }
-        for file_type in ['.pdf', '.epub', '.cbr', '.cbz', '.cb7', '.cbt']:
-            settings['save_as'][file_type] = self.ui.export_widgets[f'{file_type}_save_as'].currentText()
+        for file_type in self.ui.from_file_types:
+            settings['save_as'][file_type] = self.ui.export_widgets[f'.{file_type}_save_as'].currentText()
         return settings
 
     def get_credentials(self, service: str = ""):
