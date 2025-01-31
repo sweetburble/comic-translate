@@ -526,7 +526,7 @@ class ComicTranslate(ComicTranslateUI):
                 self.page_list.setCurrentRow(new_index)
 
             self.run_threaded(
-                lambda: self.file_handler.prepare_files(file_paths),
+                lambda: self.file_handler.prepare_files(file_paths, True),
                 on_files_prepared,
                 self.default_error_handler)
         else:
@@ -570,15 +570,14 @@ class ComicTranslate(ComicTranslateUI):
             self.undo_group.addStack(stack)
 
         if self.image_files:
-            self.display_image(0)
+            self.page_list.blockSignals(True)
+            self.update_image_cards()
+            self.page_list.blockSignals(False)
+            self.page_list.setCurrentRow(0)
+            #self.display_image(0)
             self.loaded_images.append(self.image_files[0])
         else:
             self.image_viewer.clear_scene()
-
-        self.update_image_cards()
-        self.page_list.blockSignals(True)
-        self.page_list.setCurrentRow(0)
-        self.page_list.blockSignals(False)
 
         self.image_viewer.resetTransform()
         self.image_viewer.fitInView()
@@ -1451,7 +1450,9 @@ class ComicTranslate(ComicTranslateUI):
         
         # Delete temp archive folders
         for archive in self.file_handler.archive_info:
-            shutil.rmtree(archive['temp_dir'])
+            temp_dir = archive['temp_dir']
+            if os.path.exists(temp_dir): 
+                shutil.rmtree(temp_dir)  
 
         for root, dirs, files in os.walk(self.temp_dir, topdown=False):
             for name in files:

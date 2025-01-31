@@ -445,9 +445,10 @@ class ComicTranslatePipeline:
                     self.main_page.current_worker = None
                     break
 
-                # Clean up temporary directories
-                shutil.rmtree(save_dir)
-                shutil.rmtree(archive['temp_dir'])
+                # Clean up temporary 
+                if os.path.exists(save_dir):
+                    shutil.rmtree(save_dir)
+                # The temp dir is removed when closing the app
 
                 if is_directory_empty(check_from):
                     shutil.rmtree(check_from)
