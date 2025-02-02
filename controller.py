@@ -9,7 +9,7 @@ from dataclasses import asdict, is_dataclass
 from PySide6 import QtWidgets
 from PySide6 import QtCore
 from PySide6.QtCore import QCoreApplication, QSettings, QThreadPool
-from PySide6.QtCore import QRectF
+from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtGui import QUndoStack, QUndoGroup
 
@@ -33,7 +33,7 @@ from modules.detection import do_rectangles_overlap, get_inpaint_bboxes
 from modules.utils.textblock import TextBlock
 from modules.rendering.render import manual_wrap
 from modules.utils.file_handler import FileHandler
-from modules.utils.pipeline_utils import font_selected, validate_settings, \
+from modules.utils.pipeline_utils import font_selected, validate_settings, get_layout_direction, \
                                          validate_ocr, validate_translator, get_language_code
 from modules.utils.archives import make
 from modules.utils.download import get_models, mandatory_models
@@ -225,10 +225,11 @@ class ComicTranslate(ComicTranslateUI):
         bold = render_settings.bold
         italic = render_settings.italic
         underline = render_settings.underline
+        direction = render_settings.direction
 
         text_item = TextBlockItem(text, self.image_viewer.photo, font_family, 
                                   font_size, text_color, alignment, line_spacing, 
-                                  outline_color, outline_width, bold, italic, underline)
+                                  outline_color, outline_width, bold, italic, underline, direction)
         
         text_item.setPos(blk.xyxy[0], blk.xyxy[1])
         text_item.set_plain_text(text)
@@ -305,6 +306,12 @@ class ComicTranslate(ComicTranslateUI):
             current_file = self.image_files[self.curr_img_idx]
             self.image_states[current_file]['source_lang'] = source_lang
             self.image_states[current_file]['target_lang'] = target_lang
+
+        target_en = self.lang_mapping.get(target_lang, None)
+        t_direction = get_layout_direction(target_en)
+        t_text_option = self.t_text_edit.document().defaultTextOption()
+        t_text_option.setTextDirection(t_direction)
+        self.t_text_edit.document().setDefaultTextOption(t_text_option)
 
     def set_src_trg_all(self):
         source_lang = self.s_combo.currentText()
@@ -924,11 +931,13 @@ class ComicTranslate(ComicTranslateUI):
 
             align_id = self.alignment_tool_group.get_dayu_checked()
             alignment = self.button_to_alignment[align_id]
-
+            direction = render_settings.direction
+            
             self.undo_group.activeStack().beginMacro('text_items_rendered')
             self.run_threaded(manual_wrap, self.on_render_complete, self.default_error_handler, 
                               None, self, new_blocks, font_family, line_spacing, outline_width, 
-                              bold, italic, underline, alignment, max_font_size, min_font_size)
+                              bold, italic, underline, alignment, direction, max_font_size, 
+                              min_font_size)
 
     def handle_rectangle_change(self, new_rect: QRectF, angle: float, tr_origin: Tuple):
         # Find the corresponding TextBlock in blk_list
@@ -1337,6 +1346,9 @@ class ComicTranslate(ComicTranslateUI):
             settings_obj.setValue(group_key, mapped_value)
 
     def render_settings(self) -> TextRenderingSettings:
+        target_lang = self.lang_mapping.get(self.t_combo.currentText(), None)
+        direction = get_layout_direction(target_lang)
+
         return TextRenderingSettings(
             alignment_id = self.alignment_tool_group.get_dayu_checked(),
             font_family = self.font_dropdown.currentText(),
@@ -1350,7 +1362,8 @@ class ComicTranslate(ComicTranslateUI):
             bold = self.bold_button.isChecked(),
             italic = self.italic_button.isChecked(),
             underline = self.underline_button.isChecked(),
-            line_spacing = self.line_spacing_dropdown.currentText()
+            line_spacing = self.line_spacing_dropdown.currentText(),
+            direction = direction
         )
 
     def save_main_page_settings(self):

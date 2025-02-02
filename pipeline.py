@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List
 from PySide6 import QtCore
 from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt
 
 from modules.detection import TextBlockDetector
 from modules.ocr.ocr import OCRProcessor
@@ -16,7 +17,7 @@ from modules.utils.translator_utils import get_raw_translation, get_raw_text, fo
 from modules.utils.archives import make
 
 from app.ui.canvas.rectangle import MoveableRectItem
-from app.ui.canvas.text_item import SelectionOutlineInfo
+from app.ui.canvas.text_item import OutlineInfo, OutlineType
 from app.ui.canvas.save_renderer import ImageSaveRenderer
 
 class ComicTranslatePipeline:
@@ -335,6 +336,7 @@ class ComicTranslatePipeline:
             underline = render_settings.underline
             alignment_id = render_settings.alignment_id
             alignment = self.main_page.button_to_alignment[alignment_id]
+            direction = render_settings.direction
                 
             text_items_state = []
             for blk in blk_list:
@@ -346,7 +348,7 @@ class ComicTranslatePipeline:
 
                 translation, font_size = pyside_word_wrap(translation, font, width, height,
                                                         line_spacing, outline_width, bold, italic, underline,
-                                                        alignment, max_font_size, min_font_size)
+                                                        alignment, direction, max_font_size, min_font_size)
                 
                 # Display text if on current page
                 if index == self.main_page.curr_img_idx:
@@ -372,8 +374,10 @@ class ComicTranslatePipeline:
                 'scale': 1.0,
                 'transform_origin': blk.tr_origin_point,
                 'width': width,
-                'selection_outlines': [SelectionOutlineInfo(0, len(translation), 
-                                                            outline_color, outline_width)] if outline else []
+                'direction': direction,
+                'selection_outlines': [OutlineInfo(0, len(translation), 
+                                                            outline_color, outline_width, 
+                                                            OutlineType.Full_Document)] if outline else []
                 })
 
             self.main_page.image_states[image_path]['viewer_state'].update({
