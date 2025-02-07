@@ -68,11 +68,14 @@ Note: Some of these also have Official English Translations
 
 ## Installation
 ### Python
-Install Python (>=3.10). Tick "Add python.exe to PATH" during the setup.
+Install Python (3.11 or 3.12). Tick "Add python.exe to PATH" during the setup.
 ```bash
 https://www.python.org/downloads/
 ```
-
+Install git
+```bash
+https://git-scm.com/
+```
 Clone the repo (or download the folder), navigate to the folder
 ```bash
 git clone https://github.com/ogkalu2/comic-translate
@@ -81,6 +84,11 @@ cd comic-translate
 and install the requirements
 ```bash
 pip install -r requirements.txt
+```
+
+To Update, run this in the directory the comic-translate folder is located
+```bash
+git pull
 ```
 If you run into any issues, you can try running it in a virtual environment.
 Open the terminal/cmd in whatever directory you want the virtual environment installed (or cd 'path/to/virtual environment/folder').
@@ -108,8 +116,8 @@ To re-activate, use the same commands with the terminal in the folder your virtu
 If you have an NVIDIA GPU, then it is recommended to run
 ```bash
 pip uninstall torch torchvision
-pip install torch==2.1.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html
-pip install torchvision==0.16.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+pip install torch==2.6.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+pip install torchvision==0.21.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html
 ```
 Note: The 121 in +cu121 represents the CUDA version - 12.1. Replace 121 with your CUDA version. E.g 118 if you are running CUDA 11.8
 
