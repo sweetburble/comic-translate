@@ -1,3 +1,16 @@
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true  # PyTorch 관련 패키지에만 해당 인덱스 사용
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" }
+]
+torchvision = [
+  { index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" }
+]
+
 [project]
 name = "comic-translate"
 version = "0.1.0"
@@ -5,13 +18,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
     "anthropic>=0.25.6",
     "azure-ai-vision-imageanalysis>=1.0.0b1",
     "dayu-path>=0.5.2",
     "deep-translator>=1.11.4",
     "deepl>=1.16.1",
     "easyocr>=1.7.1",
-    "ebooklib>=0.18",
     "fugashi>=1.4.0",
     "google-generativeai>=0.5.2",
     "img2pdf>=0.5.1",
@@ -23,20 +37,16 @@ dependencies = [
     "opencv-python>=4.11.0.86",
     "paddleocr>=2.8.1",
     "paddlepaddle>=2.6.1",
+    "pdfplumber>=0.11.5",
     "py7zr>=0.20.8",
-    "pymupdf>=1.24.9",
     "pyperclip>=1.9.0",
     "pyside6>=6.8.0",
     "rarfile>=4.1",
     "requests>=2.31.0",
+    "setuptools>=75.8.2",
     "stanza>=1.7.0",
     "transformers>=4.36.2",
     "ultralytics<=8.3.40",
     "unidic-lite>=1.0.8",
     "wget>=3.2",
 ]
-
-[[tool.uv.index]]
-name = "pytorch-cu121"
-url = "https://download.pytorch.org/whl/cu121"
-explicit = true
