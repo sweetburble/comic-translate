@@ -62,6 +62,7 @@ class Translator:
             self.settings.ui.tr("Claude-3-Opus"): "Claude-3-Opus",
             self.settings.ui.tr("Claude-3.7-Sonnet"): "Claude-3.7-Sonnet",
             self.settings.ui.tr("Claude-3.5-Haiku"): "Claude-3.5-Haiku",
+            self.settings.ui.tr("Gemini-2.0-Flash-Lite"): "Gemini-2.0-Flash-Lite",
             self.settings.ui.tr("Gemini-2.0-Flash"): "Gemini-2.0-Flash",
             self.settings.ui.tr("Gemini-2.0-Pro"): "Gemini-2.0-Pro",
             self.settings.ui.tr("Google Translate"): "Google Translate",
