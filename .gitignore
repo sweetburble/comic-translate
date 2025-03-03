@@ -12,6 +12,12 @@ __pycache__/
 .venv
 env/
 venv/
+# uv
+.python-version
+pyproject.toml
+uv.lock
+
+# 직접 추가
 comic-translate-venv/
 .idea
 modules/sys_prompt.py

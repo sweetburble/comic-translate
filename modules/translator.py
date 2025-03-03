@@ -2,7 +2,8 @@ import numpy as np
 from typing import List
 from .utils.textblock import TextBlock
 from .rendering.render import cv2_to_pil
-from .utils.translator_utils import encode_image_array, get_raw_text, set_texts_from_json, get_llm_client
+from .utils.translator_utils import encode_image_array, get_raw_text, \
+    set_texts_from_json, get_llm_client, MODEL_MAP
 from .utils.pipeline_utils import get_language_code
 from deep_translator import GoogleTranslator, YandexTranslator, MicrosoftTranslator
 import deepl

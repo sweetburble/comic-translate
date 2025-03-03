@@ -1,7 +1,7 @@
 # Comic Translate
 English | [한국어](docs/README_ko.md) | [Français](docs/README_fr.md) | [简体中文](docs/README_zh-CN.md) | [日本語](docs/README_ja.md) | [Português Brasileiro](docs/README_pt-BR.md)
 
-<img src="https://i.imgur.com/aNuwiJb.png">
+<img src="https://i.imgur.com/QUVK6mK.png">
 
 ## Intro
 Many Automatic Manga Translators exist. Very few properly support comics of other kinds in other languages. 
@@ -68,7 +68,7 @@ Note: Some of these also have Official English Translations
 
 ## Installation
 ### Python
-Install Python (3.11 or 3.12). Tick "Add python.exe to PATH" during the setup.
+Install Python 3.12. Tick "Add python.exe to PATH" during the setup.
 ```bash
 https://www.python.org/downloads/
 ```
@@ -85,7 +85,7 @@ Then, in the command line
 ```bash
 git clone https://github.com/ogkalu2/comic-translate
 cd comic-translate
-uv init --python >=3.11,<3.13
+uv init --python 3.12
 ```
 and install the requirements
 ```bash
@@ -95,7 +95,7 @@ uv add -r requirements.txt --compile-bytecode
 To Update, run this in the comic-translate folder
 ```bash
 git pull
-uv init --python >=3.11,<3.13 (Note: only run this line if you did not use uv for the first time installation)
+uv init --python 3.12 (Note: only run this line if you did not use uv for the first time installation)
 uv add -r requirements.txt --compile-bytecode
 ```
 
@@ -156,11 +156,11 @@ You can set your API Keys by going to Settings > Credentials
 
 ### OCR
 By Default:
-* [EasyOCR](https://github.com/JaidedAI/EasyOCR) for English
+* [doctr](https://github.com/mindee/doctr) for English, French, German, Dutch, Spanish and Italian.
 * [manga-ocr](https://github.com/kha-white/manga-ocr) for Japanese
 * [Pororo](https://github.com/yunwoong7/korean_ocr_using_pororo) for Korean 
 * [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) for Chinese 
-* [GPT-4o](https://platform.openai.com/docs/guides/vision) for French, Russian, German, Dutch, Spanish and Italian. Paid, Requires an API Key.
+* [GPT-4o](https://platform.openai.com/docs/guides/vision) for Russian. Paid, Requires an API Key.
 
 Optional:
 
