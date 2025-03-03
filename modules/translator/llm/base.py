@@ -2,6 +2,8 @@ from typing import Any
 import numpy as np
 from abc import abstractmethod
 
+from .sys_prompt import get_system_prompt
+
 from ..base import LLMTranslation
 from ...utils.textblock import TextBlock
 from ...utils.translator_utils import get_raw_text, set_texts_from_json
@@ -48,7 +50,7 @@ class BaseLLMTranslation(LLMTranslation):
         """
         try:
             entire_raw_text = get_raw_text(blk_list)
-            system_prompt = self.get_system_prompt(self.source_lang, self.target_lang)
+            system_prompt = get_system_prompt(self.source_lang, self.target_lang)
             user_prompt = f"{extra_context}\nMake the translation sound as natural as possible.\nTranslate this:\n{entire_raw_text}"
             
             entire_translated_text = self._perform_translation(user_prompt, system_prompt, image)
