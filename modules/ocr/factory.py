@@ -6,7 +6,6 @@ from .paddle_ocr import PaddleOCREngine
 from .manga_ocr.engine import MangaOCREngine
 from .pororo.engine import PororoOCREngine
 from .doctr_ocr import DocTROCREngine
-from ..utils.pipeline_utils import language_codes
 from ..utils.translator_utils import get_llm_client, MODEL_MAP
 
 class OCREngineFactory:
@@ -15,22 +14,18 @@ class OCREngineFactory:
     _engines = {}  # Cache of created engines
     
     @classmethod
-    def create_engine(cls, settings, source_lang_english: str) -> OCREngine:
+    def create_engine(cls, settings, source_lang_english: str, ocr_model: str) -> OCREngine:
         """
         Create or retrieve an appropriate OCR engine based on settings.
         
         Args:
             settings: Settings object with OCR configuration
             source_lang_english: Source language in English
+            ocr_model: OCR model to use
             
         Returns:
             Appropriate OCR engine instance
         """
-        ocr_model = settings.get_tool_selection('ocr')
-        is_microsoft = ocr_model == settings.ui.tr("Microsoft OCR")
-        is_google = ocr_model == settings.ui.tr("Google Cloud Vision")
-        is_gpt = 'GPT' in ocr_model
-        
         # Create a cache key based on model and language
         cache_key = f"{ocr_model}_{source_lang_english}"
         
@@ -38,65 +33,88 @@ class OCREngineFactory:
         if cache_key in cls._engines:
             return cls._engines[cache_key]
         
-        # Microsoft OCR
-        if is_microsoft:
-            credentials = settings.get_credentials(settings.ui.tr("Microsoft Azure"))
-            engine = MicrosoftOCR()
-            engine.initialize(
-                api_key=credentials['api_key_ocr'],
-                endpoint=credentials['endpoint']
-            )
-            cls._engines[cache_key] = engine
-            return engine
+        # Create engine based on model or language
+        engine = cls._create_new_engine(settings, source_lang_english, ocr_model)
+        cls._engines[cache_key] = engine
+        return engine
+    
+    @classmethod
+    def _create_new_engine(cls, settings, source_lang_english: str, ocr_model: str) -> OCREngine:
+        """Create a new OCR engine instance based on model and language."""
         
-        # Google OCR
-        elif is_google:
-            credentials = settings.get_credentials(settings.ui.tr("Google Cloud"))
-            engine = GoogleOCR()
-            engine.initialize(api_key=credentials['api_key'])
-            cls._engines[cache_key] = engine
-            return engine
+        # Model-specific factory functions
+        general = {
+            'Microsoft OCR': cls._create_microsoft_ocr,
+            'Google Cloud Vision': cls._create_google_ocr,
+            'GPT-4o': lambda s: cls._create_gpt_ocr(s, MODEL_MAP.get('GPT-4o')),
+        }
         
-        elif is_gpt:
-            credentials = settings.get_credentials(settings.ui.tr("Open AI GPT"))
-            gpt_client = get_llm_client('GPT', credentials['api_key'])
-            engine = GPTOCR()
-            engine.initialize(client=gpt_client, model=MODEL_MAP.get(ocr_model))
-            cls._engines[cache_key] = engine
-            return engine
+        # Language-specific factory functions (for Default model)
+        language_factories = {
+            'Japanese': cls._create_manga_ocr,
+            'Korean': cls._create_pororo_ocr,
+            'Chinese': cls._create_paddle_ocr,
+            'Russian': lambda s: cls._create_gpt_ocr(s,  MODEL_MAP.get('GPT-4o'))
+        }
         
-        # Language-specific default OCR engines
-        elif source_lang_english == "Japanese":
-            device = 'cuda' if settings.is_gpu_enabled() else 'cpu'
-            engine = MangaOCREngine()
-            engine.initialize(device=device)
-            cls._engines[cache_key] = engine
-            return engine
+        # Check if we have a specific model factory
+        if ocr_model in general:
+            return general[ocr_model](settings)
         
-        elif source_lang_english == "Korean":
-            engine = PororoOCREngine()
-            engine.initialize()
-            cls._engines[cache_key] = engine
-            return engine
+        # For Default, use language-specific engines
+        if ocr_model == 'Default' and source_lang_english in language_factories:
+            return language_factories[source_lang_english](settings)
         
-        elif source_lang_english == "Chinese":
-            engine = PaddleOCREngine()
-            engine.initialize()
-            cls._engines[cache_key] = engine
-            return engine
-        
-        elif source_lang_english == "Russian":
-            credentials = settings.get_credentials(settings.ui.tr("Open AI GPT"))
-            gpt_client = get_llm_client('GPT', credentials['api_key'])
-            engine = GPTOCR()
-            engine.initialize(client=gpt_client, model='gpt-4o')
-            cls._engines[cache_key] = engine
-            return engine
-        
-        # Default to doctr for any other language
-        else:
-            device = 'cuda' if settings.is_gpu_enabled() else 'cpu'
-            engine = DocTROCREngine()
-            engine.initialize(device=device)
-            cls._engines[cache_key] = engine
-            return engine
+        # Fallback to doctr for any other language
+        return cls._create_doctr_ocr(settings)
+    
+    @staticmethod
+    def _create_microsoft_ocr(settings) -> OCREngine:
+        credentials = settings.get_credentials(settings.ui.tr("Microsoft Azure"))
+        engine = MicrosoftOCR()
+        engine.initialize(
+            api_key=credentials['api_key_ocr'],
+            endpoint=credentials['endpoint']
+        )
+        return engine
+    
+    @staticmethod
+    def _create_google_ocr(settings) -> OCREngine:
+        credentials = settings.get_credentials(settings.ui.tr("Google Cloud"))
+        engine = GoogleOCR()
+        engine.initialize(api_key=credentials['api_key'])
+        return engine
+    
+    @staticmethod
+    def _create_gpt_ocr(settings, model) -> OCREngine:
+        credentials = settings.get_credentials(settings.ui.tr("Open AI GPT"))
+        gpt_client = get_llm_client('GPT', credentials['api_key'])
+        engine = GPTOCR()
+        engine.initialize(client=gpt_client, model=model)
+        return engine
+    
+    @staticmethod
+    def _create_manga_ocr(settings) -> OCREngine:
+        device = 'cuda' if settings.is_gpu_enabled() else 'cpu'
+        engine = MangaOCREngine()
+        engine.initialize(device=device)
+        return engine
+    
+    @staticmethod
+    def _create_pororo_ocr(settings) -> OCREngine:
+        engine = PororoOCREngine()
+        engine.initialize()
+        return engine
+    
+    @staticmethod
+    def _create_paddle_ocr(settings) -> OCREngine:
+        engine = PaddleOCREngine()
+        engine.initialize()
+        return engine
+    
+    @staticmethod
+    def _create_doctr_ocr(settings) -> OCREngine:
+        device = 'cuda' if settings.is_gpu_enabled() else 'cpu'
+        engine = DocTROCREngine()
+        engine.initialize(device=device)
+        return engine
