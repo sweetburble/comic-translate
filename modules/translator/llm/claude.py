@@ -1,10 +1,13 @@
 from typing import Any
 import numpy as np
 
+from modules.translator.llm.sys_prompt import get_prefill
+
 
 from .base import BaseLLMTranslation
 from ...utils.translator_utils import get_llm_client, encode_image_array, MODEL_MAP
 
+from .sys_prompt import get_prefill
 
 class ClaudeTranslation(BaseLLMTranslation):
     """Translation engine using Anthropic Claude models."""
@@ -45,24 +48,34 @@ class ClaudeTranslation(BaseLLMTranslation):
             Translated JSON text
         """
         media_type = "image/png"
+
+        # 메시지 구성 로직
+        message_content = []
         
         if self.img_as_llm_input:
             encoded_image = encode_image_array(image)
-            message = [
-                {"role": "user", "content": [
-                    {"type": "text", "text": user_prompt}, 
-                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": encoded_image}}
-                ]}
-            ]
+            message_content.extend([
+                {"type": "text", "text": user_prompt},
+                {"type": "image", "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": encoded_image
+                }}
+            ])
         else:
-            message = [
-                {"role": "user", "content": [{"type": "text", "text": user_prompt}]}
-            ]
+            message_content.append({"type": "text", "text": user_prompt})
+
+        prefill_text = get_prefill()
+        
+        messages = [
+            {"role": "user", "content": message_content},
+            {"role": "assistant", "content": prefill_text} # <-- 프리필 텍스트 주입
+        ]
 
         response = self.client.messages.create(
             model=self.model,
             system=system_prompt,
-            messages=message,
+            messages=messages,
             temperature=1,
             max_tokens=5000,
         )

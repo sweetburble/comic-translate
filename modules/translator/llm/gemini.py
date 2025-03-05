@@ -1,10 +1,12 @@
 from typing import Any
+from matplotlib.pyplot import hist
 import numpy as np
 
 from .base import BaseLLMTranslation
 from ...utils.translator_utils import get_llm_client, MODEL_MAP
 from ...rendering.render import cv2_to_pil
 
+from .sys_prompt import get_prefill
 
 class GeminiTranslation(BaseLLMTranslation):
     """Translation engine using Google Gemini models."""
@@ -67,8 +69,17 @@ class GeminiTranslation(BaseLLMTranslation):
             system_instruction=system_prompt, 
             safety_settings=safety_settings
         )
+
+        prefill_text = get_prefill()
+        # 프리필 히스토리 구성
+        history = [
+            {
+                "role": "model",
+                "parts": [{"text": prefill_text}], # 시스템 프리필
+            }
+        ]
         
-        chat = model_instance.start_chat(history=[])
+        chat = model_instance.start_chat(history=history)
         
         if self.img_as_llm_input:
             chat.send_message([pil_image, user_prompt])
