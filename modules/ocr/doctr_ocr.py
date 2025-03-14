@@ -1,13 +1,12 @@
 import numpy as np
 import torch
-from doctr.models import ocr_predictor
 
 from .base import OCREngine
 from ..utils.textblock import TextBlock
 from ..utils.pipeline_utils import lists_to_blk_list
 
 
-class DocTROCREngine(OCREngine):
+class DocTROCR(OCREngine):
     """OCR engine using DocTR"""
     
     def __init__(self):
@@ -15,8 +14,16 @@ class DocTROCREngine(OCREngine):
         self.device = 'cpu'
         
     def initialize(self, device: str = 'cpu') -> None:
-        self.device = device
+        """
+         Initialize the DocTR engine.
+         
+         Args:
+             device: Device to use ('cpu' or 'cuda')
+         """
         
+        from doctr.models import ocr_predictor
+
+        self.device = device
         # Initialize model if not already loaded
         if self.model is None:
             self.model = ocr_predictor(

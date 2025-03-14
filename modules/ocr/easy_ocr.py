@@ -1,5 +1,4 @@
 import numpy as np
-import easyocr
 
 from .base import OCREngine
 from ..utils.textblock import TextBlock, adjust_text_line_coordinates
@@ -9,14 +8,13 @@ class EasyOCREngine(OCREngine):
     """OCR engine using EasyOCR for English text."""
     
     def __init__(self):
-        """Initialize EasyOCR engine."""
         self.reader = None
         self.language = ['en']
         self.gpu_enabled = False
         self.expansion_percentage = 5
         
     def initialize(self, languages: list[str] = None, use_gpu: bool = False, 
-                  expansion_percentage: int = 5, **kwargs) -> None:
+                  expansion_percentage: int = 5) -> None:
         """
         Initialize the EasyOCR engine.
         
@@ -24,8 +22,9 @@ class EasyOCREngine(OCREngine):
             languages: List of language codes for OCR
             use_gpu: Whether to use GPU acceleration
             expansion_percentage: Percentage to expand text bounding boxes
-            **kwargs: Additional parameters (ignored)
         """
+
+        import easyocr
         self.language = languages or ['en']
         self.gpu_enabled = use_gpu
         self.expansion_percentage = expansion_percentage
@@ -35,16 +34,6 @@ class EasyOCREngine(OCREngine):
             self.reader = easyocr.Reader(self.language, gpu=self.gpu_enabled)
         
     def process_image(self, img: np.ndarray, blk_list: list[TextBlock]) -> list[TextBlock]:
-        """
-        Process an image with EasyOCR and update text blocks.
-        
-        Args:
-            img: Input image as numpy array
-            blk_list: List of TextBlock objects to update with OCR text
-            
-        Returns:
-            List of updated TextBlock objects with recognized text
-        """
         for blk in blk_list:
             try:
                 # Get box coordinates
