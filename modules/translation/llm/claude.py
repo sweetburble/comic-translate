@@ -5,6 +5,7 @@ import json
 
 from .base import BaseLLMTranslation
 from ...utils.translator_utils import MODEL_MAP
+from .sys_prompt import get_prefill  # 프리필 함수 임포트 추가
 
 
 class ClaudeTranslation(BaseLLMTranslation):
@@ -46,6 +47,9 @@ class ClaudeTranslation(BaseLLMTranslation):
         self.model = MODEL_MAP.get(self.model_name)
     
     def _perform_translation(self, user_prompt: str, system_prompt: str, image: np.ndarray) -> str:
+        # 프리필 텍스트 가져오기
+        prefill_text = get_prefill()
+        
         # Prepare request payload
         payload: Dict[str, Any] = {
             "model": self.model,
@@ -54,29 +58,30 @@ class ClaudeTranslation(BaseLLMTranslation):
             "max_tokens": self.max_tokens,
         }
         
-        # Add messages with text and optionally image
+        # 사용자 메시지 구성
+        user_message = {"role": "user", "content": []}
+        
         if self.img_as_llm_input and image is not None:
             # Use the encode_image method from the base class
             encoded_image, media_type = self.encode_image(image)
             
-            payload["messages"] = [
-                {
-                    "role": "user", 
-                    "content": [
-                        {"type": "text", "text": user_prompt}, 
-                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": encoded_image}}
-                    ]
-                }
+            user_message["content"] = [
+                {"type": "text", "text": user_prompt}, 
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": encoded_image}}
             ]
         else:
-            payload["messages"] = [
-                {
-                    "role": "user", 
-                    "content": [
-                        {"type": "text", "text": user_prompt}
-                    ]
-                }
+            user_message["content"] = [
+                {"type": "text", "text": user_prompt}
             ]
+        
+        # 프리필 텍스트를 assistant 메시지로 추가
+        assistant_message = {
+            "role": "assistant",
+            "content": prefill_text
+        }
+        
+        # 메시지 배열에 사용자 메시지와 프리필 메시지 추가
+        payload["messages"] = [user_message, assistant_message]
 
         # Make the API request
         response = requests.post(

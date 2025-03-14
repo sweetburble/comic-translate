@@ -20,4 +20,4 @@ uv.lock
 # 직접 추가
 comic-translate-venv/
 .idea
-modules/translator/llm/sys_prompt.py
+modules/translation/llm/sys_prompt.py

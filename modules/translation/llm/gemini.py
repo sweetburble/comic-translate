@@ -4,7 +4,7 @@ import requests
 
 from .base import BaseLLMTranslation
 from ...utils.translator_utils import MODEL_MAP
-
+from .sys_prompt import get_prefill  # 프리필 함수 임포트 추가
 
 class GeminiTranslation(BaseLLMTranslation):
     """Translation engine using Google Gemini models via REST API."""
@@ -65,15 +65,14 @@ class GeminiTranslation(BaseLLMTranslation):
             {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
         ]
         
-        # Prepare parts for the request
-        parts = []
+        # 사용자 부분 준비
+        user_parts = []
         
         # Add image if needed
         if self.img_as_llm_input:
             # Base64 encode the image
-
             img_b64, mime_type = self.encode_image(image)
-            parts.append({
+            user_parts.append({
                 "inline_data": {
                     "mime_type": mime_type,
                     "data": img_b64
@@ -81,13 +80,26 @@ class GeminiTranslation(BaseLLMTranslation):
             })
         
         # Add text prompt
-        parts.append({"text": user_prompt})
+        user_parts.append({"text": user_prompt})
+        
+        # 프리필 텍스트 가져오기
+        prefill_text = get_prefill()
+        
+        # 채팅 히스토리 구성 (프리필 포함)
+        contents = [
+            {
+                "role": "user",
+                "parts": user_parts  # 사용자 메시지 (이미지+텍스트)
+            },
+            {
+                "role": "model",
+                "parts": [{"text": prefill_text}]  # 프리필 메시지
+            },
+        ]
         
         # Create the request payload
         payload = {
-            "contents": [{
-                "parts": parts
-            }],
+            "contents": contents,
             "generationConfig": generation_config,
             "safetySettings": safety_settings
         }
