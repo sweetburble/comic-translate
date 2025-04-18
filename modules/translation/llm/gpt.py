@@ -15,8 +15,6 @@ class GPTTranslation(BaseLLMTranslation):
         self.model_name = None
         self.api_key = None
         self.api_base_url = "https://api.openai.com/v1"
-        self.temperature = 1.0
-        self.max_tokens = 5000
         self.supports_images = True
     
     def initialize(self, settings: Any, source_lang: str, target_lang: str, model_name: str, **kwargs) -> None:
@@ -87,6 +85,7 @@ class GPTTranslation(BaseLLMTranslation):
             "messages": messages,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
+            "top_p": self.top_p,
         }
 
         return self._make_api_request(payload, headers)

@@ -18,8 +18,6 @@ class ClaudeTranslation(BaseLLMTranslation):
         self.api_key = None
         self.api_url = "https://api.anthropic.com/v1/messages"
         self.headers = None
-        self.temperature = 1
-        self.max_tokens = 5000
     
     def initialize(self, settings: Any, source_lang: str, target_lang: str, model_name: str, **kwargs) -> None:
         """
@@ -33,6 +31,7 @@ class ClaudeTranslation(BaseLLMTranslation):
         """
         super().initialize(settings, source_lang, target_lang, **kwargs)
         
+        self.temperature = self.temperature/2
         self.model_name = model_name
         credentials = settings.get_credentials(settings.ui.tr('Anthropic Claude'))
         self.api_key = credentials.get('api_key', '')
@@ -56,6 +55,7 @@ class ClaudeTranslation(BaseLLMTranslation):
             "system": system_prompt,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
+            "top_p": self.top_p,
         }
         
         # 사용자 메시지 구성
