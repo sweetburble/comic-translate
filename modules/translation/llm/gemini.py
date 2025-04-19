@@ -55,6 +55,14 @@ class GeminiTranslation(BaseLLMTranslation):
             "maxOutputTokens": self.max_tokens,
             "topP": self.top_p,
         }
+
+        print(f"Model Name: {self.model_name}")
+
+        # Gemini-2.0-Flash-Lite 모델은 thinkingConfig를 지원하지 않음
+        if "Gemini-2.0-Flash-Lite" != self.model_name:
+            generation_config["thinkingConfig"] = {
+                "thinkingBudget": 0
+            }
         
         # Setup safety settings
         safety_settings = [

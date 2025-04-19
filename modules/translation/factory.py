@@ -7,6 +7,7 @@ from .llm.gpt import GPTTranslation
 from .llm.claude import ClaudeTranslation
 from .llm.gemini import GeminiTranslation
 from .llm.deepseek import DeepseekTranslation
+from .llm.grok import GrokTranslation
 from .llm.custom import CustomTranslation
 
 
@@ -29,6 +30,7 @@ class TranslationFactory:
         "Claude": ClaudeTranslation,
         "Gemini": GeminiTranslation,
         "Deepseek": DeepseekTranslation,
+        "Grok": GrokTranslation,
         "Custom": CustomTranslation
     }
     

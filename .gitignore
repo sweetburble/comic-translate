@@ -21,3 +21,4 @@ uv.lock
 comic-translate-venv/
 .idea
 modules/translation/llm/sys_prompt.py
+test.py

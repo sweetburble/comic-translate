@@ -38,13 +38,13 @@ class SettingsPageUI(QtWidgets.QWidget):
         self.alignment = [self.tr("Left"), self.tr("Center"), self.tr("Right")]
 
         self.credential_services = [self.tr("Custom"), self.tr("Deepseek"), self.tr("Open AI GPT"), self.tr("Microsoft Azure"), self.tr("Google Cloud"), 
-                                    self.tr("Google Gemini"), self.tr("DeepL"), self.tr("Anthropic Claude"), self.tr("Yandex")]
+                                    self.tr("Google Gemini"), self.tr("DeepL"), self.tr("Anthropic Claude"), self.tr("Yandex"), self.tr("Grok")]
         
         self.supported_translators = [self.tr("GPT-4o"), self.tr("GPT-4o mini"), self.tr("DeepL"), 
                                     self.tr("Claude-3-Opus"), self.tr("Claude-3.7-Sonnet"), 
-                                    self.tr("Claude-3.5-Haiku"), self.tr("Gemini-2.0-Flash-Lite"), self.tr("Gemini-2.0-Flash"), 
-                                    self.tr("Gemini-2.0-Pro"), self.tr("Yandex"), self.tr("Google Translate"),
-                                    self.tr("Microsoft Translator"), self.tr("Deepseek-v3"), self.tr("Custom"),]
+                                    self.tr("Claude-3.5-Haiku"), self.tr("Gemini-2.0-Flash-Lite"), self.tr("Gemini-2.5-Flash"), 
+                                    self.tr("Gemini-2.5-Pro"), self.tr("Yandex"), self.tr("Google Translate"),
+                                    self.tr("Microsoft Translator"), self.tr("Deepseek-v3"), self.tr("Grok-3-Mini"), self.tr("Custom"),]
         
         self.languages = ['English', '한국어', 'Français', '日本語', 
          '简体中文', '繁體中文', 'русский', 'Deutsch', 
@@ -82,8 +82,9 @@ class SettingsPageUI(QtWidgets.QWidget):
             self.tr("Claude-3.7-Sonnet"): "Claude-3.7-Sonnet",
             self.tr("Claude-3.5-Haiku"): "Claude-3.5-Haiku",
             self.tr("Gemini-2.0-Flash-Lite"): "Gemini-2.0-Flash-Lite",
-            self.tr("Gemini-2.0-Flash"): "Gemini-2.0-Flash",
-            self.tr("Gemini-2.0-Pro"): "Gemini-2.0-Pro",
+            self.tr("Gemini-2.5-Flash"): "Gemini-2.5-Flash",
+            self.tr("Gemini-2.5-Pro"): "Gemini-2.5-Pro",
+            self.tr("Grok-3-Mini"): "Grok-3-Mini",
             self.tr("Yandex"): "Yandex",
             self.tr("Google Translate"): "Google Translate",
             self.tr("Microsoft Translator"): "Microsoft Translator",
@@ -121,6 +122,7 @@ class SettingsPageUI(QtWidgets.QWidget):
             self.tr("DeepL"): "DeepL",
             self.tr("Anthropic Claude"): "Anthropic Claude",
             self.tr("Yandex"): "Yandex",
+            self.tr("Grok"): "Grok",
         }
 
         # Create reverse mappings for loading

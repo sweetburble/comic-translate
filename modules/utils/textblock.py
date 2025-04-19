@@ -32,7 +32,7 @@ class TextBlock(object):
         self.text_class = text_class
         self.angle = angle
         self.tr_origin_point = ()
- 
+
         self.lines = lines
         if isinstance(inpaint_bboxes, np.ndarray):
             self.inpaint_bboxes = inpaint_bboxes
