@@ -1,3 +1,6 @@
+import json
+import hashlib
+
 from .base import OCREngine
 from .microsoft_ocr import MicrosoftOCR
 from .google_ocr import GoogleOCR
@@ -12,6 +15,11 @@ class OCRFactory:
     """Factory for creating appropriate OCR engines based on settings."""
     
     _engines = {}  # Cache of created engines
+
+    LLM_ENGINE_IDENTIFIERS = {
+        "GPT": GPTOCR,
+        "Gemini": GeminiOCR,
+    }
     
     @classmethod
     def create_engine(cls, settings, source_lang_english: str, ocr_model: str) -> OCREngine:
@@ -27,7 +35,7 @@ class OCRFactory:
             Appropriate OCR engine instance
         """
         # Create a cache key based on model and language
-        cache_key = f"{ocr_model}_{source_lang_english}"
+        cache_key = cls._create_cache_key(ocr_model, source_lang_english, settings)
         
         # Return cached engine if available
         if cache_key in cls._engines:
@@ -39,6 +47,56 @@ class OCRFactory:
         return engine
     
     @classmethod
+    def _create_cache_key(cls, ocr_key: str,
+                        source_lang: str,
+                        settings) -> str:
+        """
+        Build a cache key for all ocr engines.
+
+        - Always includes per-ocr credentials (if available),
+          so changing any API key, URL, region, etc. triggers a new engine.
+        - For LLM engines, also includes all LLM-specific settings
+          (temperature, top_p, context, etc.).
+        - The cache key is a hash of these dynamic values, combined with
+          the ocr key and source language.
+        - If no dynamic values are found, falls back to a simple key
+          based on ocr and source language.
+        """
+        base = f"{ocr_key}_{source_lang}"
+
+        # Gather any dynamic bits we care about:
+        extras = {}
+
+        # Always grab credentials for this service (if any)
+        creds = settings.get_credentials(ocr_key)
+        if creds:
+            extras["credentials"] = creds
+
+        # The LLM OCR engines currently don't use the settings in the LLMs tab
+        # so exclude this for now
+
+        # # If it's an LLM, also grab the llm settings
+        # is_llm = any(identifier in ocr_key
+        #              for identifier in cls.LLM_ENGINE_IDENTIFIERS)
+        # if is_llm:
+        #     extras["llm"] = settings.get_llm_settings()
+
+        if not extras:
+            return base
+
+        # Otherwise, hash the combined extras dict
+        extras_json = json.dumps(
+            extras,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str
+        )
+        digest = hashlib.sha256(extras_json.encode("utf-8")).hexdigest()
+
+        # Append the fingerprint
+        return f"{base}_{digest}"
+    
+    @classmethod
     def _create_new_engine(cls, settings, source_lang_english: str, ocr_model: str) -> OCREngine:
         """Create a new OCR engine instance based on model and language."""
         
@@ -46,7 +104,7 @@ class OCRFactory:
         general = {
             'Microsoft OCR': cls._create_microsoft_ocr,
             'Google Cloud Vision': cls._create_google_ocr,
-            'GPT-4o': lambda s: cls._create_gpt_ocr(s, ocr_model),
+            'GPT-4.1-mini': lambda s: cls._create_gpt_ocr(s, ocr_model),
             'Gemini-2.0-Flash': lambda s: cls._create_gemini_ocr(s, ocr_model)
         }
         
@@ -55,7 +113,7 @@ class OCRFactory:
             'Japanese': cls._create_manga_ocr,
             'Korean': cls._create_pororo_ocr,
             'Chinese': cls._create_paddle_ocr,
-            'Russian': lambda s: cls._create_gpt_ocr(s, 'GPT-4o')
+            'Russian': lambda s: cls._create_gpt_ocr(s, 'GPT-4.1-mini')
         }
         
         # Check if we have a specific model factory

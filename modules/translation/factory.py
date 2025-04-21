@@ -1,3 +1,6 @@
+import json
+import hashlib
+
 from .base import TranslationEngine
 from .google import GoogleTranslation
 from .microsoft import MicrosoftTranslation
@@ -53,7 +56,7 @@ class TranslationFactory:
             Appropriate translation engine instance
         """
         # Create a cache key based on translator and language pair
-        cache_key = f"{translator_key}_{source_lang}_{target_lang}"
+        cache_key = cls._create_cache_key(translator_key, source_lang, target_lang, settings)
         
         # Return cached engine if available
         if cache_key in cls._engines:
@@ -87,3 +90,51 @@ class TranslationFactory:
         
         # Default to LLM engine if no match found
         return cls.DEFAULT_LLM_ENGINE
+    
+    @classmethod
+    def _create_cache_key(cls, translator_key: str,
+                        source_lang: str,
+                        target_lang: str,
+                        settings) -> str:
+        """
+        Build a cache key for all translation engines.
+
+        - Always includes per-translator credentials (if available),
+          so changing any API key, URL, region, etc. triggers a new engine.
+        - For LLM engines, also includes all LLM-specific settings
+          (temperature, top_p, context, etc.).
+        - The cache key is a hash of these dynamic values, combined with
+          the translator key and language pair.
+        - If no dynamic values are found, falls back to a simple key
+          based on translator and language pair.
+        """
+        base = f"{translator_key}_{source_lang}_{target_lang}"
+
+        # Gather any dynamic bits we care about:
+        extras = {}
+
+        # Always grab credentials for this service (if any)
+        creds = settings.get_credentials(translator_key)
+        if creds:
+            extras["credentials"] = creds
+
+        # If it's an LLM, also grab the llm settings
+        is_llm = any(identifier in translator_key
+                     for identifier in cls.LLM_ENGINE_IDENTIFIERS)
+        if is_llm:
+            extras["llm"] = settings.get_llm_settings()
+
+        if not extras:
+            return base
+
+        # Otherwise, hash the combined extras dict
+        extras_json = json.dumps(
+            extras,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str
+        )
+        digest = hashlib.sha256(extras_json.encode("utf-8")).hexdigest()
+
+        # Append the fingerprint
+        return f"{base}_{digest}"

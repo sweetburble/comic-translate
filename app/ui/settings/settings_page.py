@@ -1,5 +1,6 @@
 import os, shutil
 from typing import List
+from dataclasses import asdict, is_dataclass
 
 from PySide6 import QtWidgets, QtGui
 from PySide6.QtCore import Signal, QSettings
@@ -7,7 +8,20 @@ from PySide6.QtGui import QFont, QFontDatabase
 
 from .settings_ui import SettingsPageUI
 
-from dataclasses import asdict, is_dataclass
+# Dictionary to map old model names to the newest versions in settings
+OCR_MIGRATIONS = {
+    "GPT-4o":       "GPT-4.1-mini",
+    "Gemini-2.5-Flash": "Gemini-2.0-Flash",
+}
+
+TRANSLATOR_MIGRATIONS = {
+    "GPT-4o":              "GPT-4.1",
+    "GPT-4o mini":         "GPT-4.1-mini",
+    "Gemini-2.0-Flash":    "Gemini-2.5-Flash",
+    "Gemini-2.0-Pro":      "Gemini-2.5-Flash",
+    "Gemini-2.5-Pro":      "Gemini-2.5-Flash",
+    "Claude-3-Opus":       "Claude-3.7-Sonnet",
+}
 
 class SettingsPage(QtWidgets.QWidget):
     theme_changed = Signal(str)
@@ -73,37 +87,34 @@ class SettingsPage(QtWidgets.QWidget):
 
     def get_credentials(self, service: str = ""):
         save_keys = self.ui.save_keys_checkbox.isChecked()
-        
+
+        def _text_or_none(widget_key):
+            w = self.ui.credential_widgets.get(widget_key)
+            return w.text() if w is not None else None
+
         if service:
+            creds = {'save_key': save_keys}
             if service == "Microsoft Azure":
-                return {
-                    'api_key_ocr': self.ui.credential_widgets["Microsoft Azure_api_key_ocr"].text(),
-                    'api_key_translator': self.ui.credential_widgets["Microsoft Azure_api_key_translator"].text(),
-                    'region_translator': self.ui.credential_widgets["Microsoft Azure_region"].text(),
-                    'save_key': save_keys,
-                    'endpoint': self.ui.credential_widgets["Microsoft Azure_endpoint"].text()
-                }
+                creds.update({
+                    'api_key_ocr': _text_or_none("Microsoft Azure_api_key_ocr"),
+                    'api_key_translator': _text_or_none("Microsoft Azure_api_key_translator"),
+                    'region_translator': _text_or_none("Microsoft Azure_region"),
+                    'endpoint': _text_or_none("Microsoft Azure_endpoint"),
+                })
             elif service == "Custom":
-                return {
-                    'api_key': self.ui.credential_widgets[f"{service}_api_key"].text(),
-                    'api_url': self.ui.credential_widgets[f"{service}_api_url"].text(),
-                    'model': self.ui.credential_widgets[f"{service}_model"].text(),
-                    'save_key': save_keys
-                }
+                for field in ("api_key", "api_url", "model"):
+                    creds[field] = _text_or_none(f"Custom_{field}")
             elif service == "Yandex":
-                return {
-                    'api_key': self.ui.credential_widgets[f"{service}_api_key"].text(),
-                    'folder_id': self.ui.credential_widgets[f"{service}_folder_id"].text(),
-                    'save_key': save_keys
-                }
+                creds['api_key'] = _text_or_none("Yandex_api_key")
+                creds['folder_id'] = _text_or_none("Yandex_folder_id")
             else:
-                return {
-                    'api_key': self.ui.credential_widgets[f"{service}_api_key"].text(),
-                    'save_key': save_keys
-                }
-        else:
-            return {s: self.get_credentials(s) for s in self.ui.credential_services}
-        
+                creds['api_key'] = _text_or_none(f"{service}_api_key")
+
+            return creds
+
+        # no `service` passed → recurse over all known services
+        return {s: self.get_credentials(s) for s in self.ui.credential_services}
+
     def get_hd_strategy_settings(self):
         strategy = self.ui.inpaint_strategy_combo.currentText()
         settings = {
@@ -239,11 +250,13 @@ class SettingsPage(QtWidgets.QWidget):
 
         # Load tools settings
         settings.beginGroup('tools')
-        translator = settings.value('translator', 'GPT-4o')
+        raw_translator = settings.value('translator', 'GPT-4.1')
+        translator = TRANSLATOR_MIGRATIONS.get(raw_translator, raw_translator)
         translated_translator = self.ui.reverse_mappings.get(translator, translator)
         self.ui.translator_combo.setCurrentText(translated_translator)
 
-        ocr = settings.value('ocr', 'Default')
+        raw_ocr = settings.value('ocr', 'Default')
+        ocr = OCR_MIGRATIONS.get(raw_ocr, raw_ocr)
         translated_ocr = self.ui.reverse_mappings.get(ocr, ocr)
         self.ui.ocr_combo.setCurrentText(translated_ocr)
 
