@@ -99,7 +99,6 @@ def filter_bounding_boxes(bboxes, width_tolerance=5, height_tolerance=5):
         if not (is_close(bbox[0], bbox[2], width_tolerance) or is_close(bbox[1], bbox[3], height_tolerance))
     ])
 
-
 def detect_content_in_bbox(image):
     """
     Detect content (text) within a cropped image.
@@ -166,7 +165,6 @@ def detect_content_in_bbox(image):
     
     return content_bboxes
 
-
 def get_inpaint_bboxes(text_bbox, image):
     """
     Get inpaint bounding boxes for a text region.
@@ -220,8 +218,6 @@ def is_mostly_contained(outer_box, inner_box, threshold):
     
     # Check if the proportion of intersection to inner area is greater than the threshold
     return intersection_area / inner_area >= threshold
-
-# From https://github.com/TareHimself/manga-translator/blob/master/translator/utils.py
 
 def adjust_contrast_brightness(img: np.ndarray, contrast: float = 1.0, brightness: int = 0):
     """
@@ -334,3 +330,55 @@ def bubble_interior_bounds(frame_mask: np.ndarray):
     x2, y2 = lir.pt2(rect)
 
     return x1, y1, x2, y2
+
+def merge_boxes(box1, box2):
+    """Merge two bounding boxes"""
+    return [
+        min(box1[0], box2[0]),
+        min(box1[1], box2[1]),
+        max(box1[2], box2[2]),
+        max(box1[3], box2[3])
+    ]
+
+def merge_overlapping_boxes(bboxes: np.ndarray,
+                            containment_threshold: float = 0.3,
+                            overlap_threshold: float = 0.5,
+                           ) -> np.ndarray:
+    """
+    Merge boxes that are mostly contained within each other, and
+    prune out duplicates/overlaps immediately as you go.
+    """
+    accepted = []
+
+    for i, box in enumerate(bboxes):
+        # 1) Merge this box against all others based on containment:
+        merged = box.copy()
+        for j, other in enumerate(bboxes):
+            if i == j:
+                continue
+            if (is_mostly_contained(merged, other, containment_threshold)
+             or is_mostly_contained(other, merged, containment_threshold)):
+                merged = merge_boxes(merged, other)
+
+        # 2) On-the-fly pruning: see if `merged` overlaps or duplicates any accepted box
+        conflict = False
+        for acc in accepted:
+            if np.array_equal(merged, acc) or do_rectangles_overlap(merged, acc, overlap_threshold):
+                conflict = True
+                break
+
+        if conflict:
+            # skip this one entirely
+            continue
+
+        # 3) Optionally, remove any already-accepted boxes that overlap too much with the new merged box
+        accepted = [
+            acc for acc in accepted
+            if not (np.array_equal(acc, merged)
+                    or do_rectangles_overlap(merged, acc, overlap_threshold))
+        ]
+
+        # 4) Finally accept the new box
+        accepted.append(merged)
+
+    return np.array(accepted)

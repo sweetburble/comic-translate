@@ -58,7 +58,6 @@ class RTDetrV2Detection(DetectionEngine):
             image,
             self._detect_single_image
         )
-        
         return self.create_text_blocks(image, text_boxes, bubble_boxes)
     
     def _detect_single_image(self, image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -84,7 +83,7 @@ class RTDetrV2Detection(DetectionEngine):
         # Run inference
         with torch.no_grad():
             outputs = self.model(**inputs)
-        
+
         # Post-process results
         target_sizes = torch.tensor([pil_image.size[::-1]])
         if self.device == "cuda" and torch.cuda.is_available():
@@ -95,7 +94,7 @@ class RTDetrV2Detection(DetectionEngine):
             target_sizes=target_sizes, 
             threshold=self.confidence_threshold
         )[0]
-        
+
         # Create bounding boxes for each class
         bubble_boxes = []
         text_boxes = []
