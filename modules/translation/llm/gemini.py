@@ -54,9 +54,6 @@ class GeminiTranslation(BaseLLMTranslation):
             "temperature": self.temperature,
             "maxOutputTokens": self.max_tokens,
             "topP": self.top_p,
-            "thinkingConfig": {
-                "thinkingBudget": 0
-            },
         }
 
         print(f"Model Name: {self.model_name}")
