@@ -88,7 +88,7 @@ class ClaudeTranslation(BaseLLMTranslation):
             self.api_url,
             headers=self.headers,
             data=json.dumps(payload),
-            timeout=15
+            timeout=30
         )
         
         # Handle response
