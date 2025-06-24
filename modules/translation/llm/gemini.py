@@ -4,7 +4,7 @@ import requests
 
 from .base import BaseLLMTranslation
 from ...utils.translator_utils import MODEL_MAP
-from .sys_prompt import get_prefill  # 프리필 함수 임포트 추가
+from .sys_prompt import get_gemini_prefill  # 프리필 함수 임포트 추가
 
 class GeminiTranslation(BaseLLMTranslation):
     """Translation engine using Google Gemini models via REST API."""
@@ -54,15 +54,10 @@ class GeminiTranslation(BaseLLMTranslation):
             "temperature": self.temperature,
             "maxOutputTokens": self.max_tokens,
             "topP": self.top_p,
+            "thinkingConfig": { "thinkingBudget": 0 }
         }
 
         print(f"Model Name: {self.model_name}")
-
-        # Gemini-2.0-Flash-Lite 모델은 thinkingConfig를 지원하지 않음
-        if "Gemini-2.0-Flash-Lite" != self.model_name:
-            generation_config["thinkingConfig"] = {
-                "thinkingBudget": 0
-            }
         
         # Setup safety settings
         safety_settings = [
@@ -90,7 +85,7 @@ class GeminiTranslation(BaseLLMTranslation):
         user_parts.append({"text": user_prompt})
         
         # 프리필 텍스트 가져오기
-        prefill_text = get_prefill()
+        prefill_text = get_gemini_prefill()
         
         # 채팅 히스토리 구성 (프리필 포함)
         contents = [

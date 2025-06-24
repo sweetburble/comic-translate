@@ -32,7 +32,7 @@ class SettingsPageUI(QtWidgets.QWidget):
 
         self.inpainters = ['LaMa', 'AOT', 'MI-GAN']
         self.detectors = ['RT-DETR-v2']
-        self.ocr_engines = [self.tr("Default"), self.tr('Microsoft OCR'), self.tr('Google Cloud Vision'), self.tr('Gemini-2.0-Flash'), self.tr('GPT-4.1-mini')]
+        self.ocr_engines = [self.tr("Default"), self.tr('Microsoft OCR'), self.tr('Google Cloud Vision'), self.tr('Gemini-2.5-Flash'), self.tr('GPT-4.1-mini')]
         self.inpaint_strategy = [self.tr('Resize'), self.tr('Original'), self.tr('Crop')]
         self.themes = [self.tr('Dark'), self.tr('Light')]
         self.alignment = [self.tr("Left"), self.tr("Center"), self.tr("Right")]
@@ -41,7 +41,7 @@ class SettingsPageUI(QtWidgets.QWidget):
                                     self.tr("Google Gemini"), self.tr("DeepL"), self.tr("Anthropic Claude"), self.tr("Yandex"), self.tr("Grok")]
         
         self.supported_translators = [self.tr("GPT-4.1"), self.tr("GPT-4.1-mini"), self.tr("DeepL"), 
-                                    self.tr("Claude-3.7-Sonnet"), self.tr("Claude-3.5-Haiku"), self.tr("Gemini-2.0-Flash-Lite"),
+                                    self.tr("Claude-4-Sonnet"), self.tr("Claude-3.5-Haiku"), self.tr("Gemini-2.5-Flash-Lite"),
                                     self.tr("Gemini-2.5-Flash"), self.tr("Gemini-2.5-Pro"), self.tr("Yandex"), self.tr("Google Translate"),
                                     self.tr("Microsoft Translator"), self.tr("Deepseek-v3"), self.tr("Grok-3-Mini"), self.tr("Custom"),]
         
@@ -77,9 +77,9 @@ class SettingsPageUI(QtWidgets.QWidget):
             self.tr("GPT-4.1"): "GPT-4.1",
             self.tr("GPT-4.1-mini"): "GPT-4.1-mini",
             self.tr("DeepL"): "DeepL",
-            self.tr("Claude-3.7-Sonnet"): "Claude-3.7-Sonnet",
+            self.tr("Claude-4-Sonnet"): "Claude-4-Sonnet",
             self.tr("Claude-3.5-Haiku"): "Claude-3.5-Haiku",
-            self.tr("Gemini-2.0-Flash-Lite"): "Gemini-2.0-Flash-Lite",
+            self.tr("Gemini-2.5-Flash-Lite"): "Gemini-2.5-Flash-Lite",
             self.tr("Gemini-2.5-Flash"): "Gemini-2.5-Flash",
             self.tr("Gemini-2.5-Pro"): "Gemini-2.5-Pro",
             self.tr("Grok-3-Mini"): "Grok-3-Mini",
