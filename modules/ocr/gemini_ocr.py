@@ -33,6 +33,7 @@ class GeminiOCR(OCREngine):
         credentials = settings.get_credentials(settings.ui.tr('Google Gemini'))
         self.api_key = credentials.get('api_key', '')
         self.model = MODEL_MAP.get(model)
+        print(f"Initialized Gemini OCR with model: {self.model}")
         
     def process_image(self, img: np.ndarray, blk_list: list[TextBlock]) -> list[TextBlock]:
         """
@@ -106,6 +107,7 @@ class GeminiOCR(OCREngine):
             # Setup generation config
             generation_config = {
                 "maxOutputTokens": self.max_output_tokens,
+                "thinkingConfig": { "thinkingBudget": 0 }
             }
             
             # Prepare payload
@@ -118,7 +120,7 @@ class GeminiOCR(OCREngine):
                     "parts": [
                         {
                             "inline_data": {
-                                "mime_type": "image/jpg",
+                                "mime_type": "image/jpeg",
                                 "data": base64_image
                             }
                         },
