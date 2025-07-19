@@ -16,9 +16,11 @@ venv/
 .python-version
 pyproject.toml
 uv.lock
+# Test files
+test_*.py
+demo_*.py
 
 # 직접 추가
 comic-translate-venv/
 .idea
 modules/translation/llm/sys_prompt.py
-test.py

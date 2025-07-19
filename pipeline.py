@@ -1,6 +1,9 @@
 import os, json
 import cv2, shutil
 import numpy as np
+import requests
+import logging
+import hashlib
 from datetime import datetime
 from typing import List
 from PySide6 import QtCore
@@ -20,6 +23,9 @@ from app.ui.canvas.rectangle import MoveableRectItem
 from app.ui.canvas.text_item import OutlineInfo, OutlineType
 from app.ui.canvas.save_renderer import ImageSaveRenderer
 
+
+logger = logging.getLogger(__name__)
+
 class ComicTranslatePipeline:
     def __init__(self, main_page):
         self.main_page = main_page
@@ -27,6 +33,18 @@ class ComicTranslatePipeline:
         self.inpainter_cache = None
         self.cached_inpainter_key = None
         self.ocr = OCRProcessor()
+        self.ocr_cache = {} # OCR results cache: {(image_hash, model_key, source_lang): {block_id: text}}
+        self.translation_cache = {} # Translation results cache: {(image_hash, translator_key, source_lang, target_lang, extra_context): {block_id: translation}}
+
+    def clear_ocr_cache(self):
+        """Clear the OCR cache. Note: Cache now persists across image and model changes automatically."""
+        self.ocr_cache = {}
+        logger.info("OCR cache manually cleared")
+
+    def clear_translation_cache(self):
+        """Clear the translation cache. Note: Cache now persists across image and model changes automatically."""
+        self.translation_cache = {}
+        logger.info("Translation cache manually cleared")
 
     def load_box_coords(self, blk_list: List[TextBlock]):
         self.main_page.image_viewer.clear_rectangles()
@@ -119,17 +137,125 @@ class ComicTranslatePipeline:
         blk = self.main_page.rect_item_ctrl.find_corresponding_text_block(srect_coords)
         return blk
 
+    def _generate_image_hash(self, image):
+        """Generate a hash for the image to use as cache key"""
+        try:
+            # Use a small portion of the image data to generate hash for efficiency
+            # Take every 10th pixel to reduce computation while maintaining uniqueness
+            sample_data = image[::10, ::10].tobytes()
+            return hashlib.md5(sample_data).hexdigest()
+        except Exception as e:
+            # Fallback: use the full image shape and first few bytes if sampling fails
+            shape_str = str(image.shape) if hasattr(image, 'shape') else str(type(image))
+            fallback_data = shape_str.encode() + str(image.dtype).encode() if hasattr(image, 'dtype') else b'fallback'
+            return hashlib.md5(fallback_data).hexdigest()
+
+    def _get_cache_key(self, image, source_lang):
+        """Generate cache key for OCR results"""
+        image_hash = self._generate_image_hash(image)
+        ocr_model = self.main_page.settings_page.get_tool_selection('ocr')
+        return (image_hash, ocr_model, source_lang)
+
+    def _get_block_id(self, block):
+        """Generate a unique identifier for a text block based on its position"""
+        # Use the block's bounding box coordinates as a unique identifier
+        try:
+            x1, y1, x2, y2 = block.xyxy
+            return f"{x1}_{y1}_{x2}_{y2}"
+        except (AttributeError, ValueError, TypeError):
+            # Fallback: use object id if xyxy is not available or malformed
+            return str(id(block))
+
+    def _is_ocr_cached(self, cache_key):
+        """Check if OCR results are cached for this image/model/language combination"""
+        return cache_key in self.ocr_cache
+
+    def _cache_ocr_results(self, cache_key, blk_list):
+        """Cache OCR results for all blocks"""
+        try:
+            block_results = {}
+            for blk in blk_list:
+                block_id = self._get_block_id(blk)
+                # Ensure we have text to cache, use empty string if None
+                text = getattr(blk, 'text', '') or ''
+                block_results[block_id] = text
+            self.ocr_cache[cache_key] = block_results
+        except Exception as e:
+            logger.warning(f"Failed to cache OCR results: {e}")
+            # Don't raise exception, just skip caching
+
+    def _get_cached_text_for_block(self, cache_key, block):
+        """Retrieve cached text for a specific block"""
+        block_id = self._get_block_id(block)
+        cached_results = self.ocr_cache.get(cache_key, {})
+        return cached_results.get(block_id, "")
+
+    def _get_translation_cache_key(self, image, source_lang, target_lang, translator_key, extra_context):
+        """Generate cache key for translation results"""
+        image_hash = self._generate_image_hash(image)
+        # Include extra_context in cache key since it affects translation results
+        context_hash = hashlib.md5(extra_context.encode()).hexdigest() if extra_context else "no_context"
+        return (image_hash, translator_key, source_lang, target_lang, context_hash)
+
+    def _is_translation_cached(self, cache_key):
+        """Check if translation results are cached for this image/translator/language combination"""
+        return cache_key in self.translation_cache
+
+    def _cache_translation_results(self, cache_key, blk_list):
+        """Cache translation results for all blocks"""
+        try:
+            block_results = {}
+            for blk in blk_list:
+                block_id = self._get_block_id(blk)
+                # Ensure we have translation to cache, use empty string if None
+                translation = getattr(blk, 'translation', '') or ''
+                block_results[block_id] = translation
+            self.translation_cache[cache_key] = block_results
+        except Exception as e:
+            logger.warning(f"Failed to cache translation results: {e}")
+            # Don't raise exception, just skip caching
+
+    def _get_cached_translation_for_block(self, cache_key, block):
+        """Retrieve cached translation for a specific block"""
+        block_id = self._get_block_id(block)
+        cached_results = self.translation_cache.get(cache_key, {})
+        return cached_results.get(block_id, "")
+
     def OCR_image(self, single_block=False):
         source_lang = self.main_page.s_combo.currentText()
         if self.main_page.image_viewer.hasPhoto() and self.main_page.image_viewer.rectangles:
             image = self.main_page.image_viewer.get_cv2_image()
-            self.ocr.initialize(self.main_page, source_lang)
+            cache_key = self._get_cache_key(image, source_lang)
+            
             if single_block:
                 blk = self.get_selected_block()
-                self.ocr.process(image, [blk])
+                if blk is None:
+                    return
+                
+                # Check if we have cached results for this image/model/language
+                if self._is_ocr_cached(cache_key):
+                    cached_text = self._get_cached_text_for_block(cache_key, blk)
+                    blk.text = cached_text
+                    logger.info(f"Using cached OCR result for block: {cached_text}")
+                else:
+                    # Run OCR on a deep copies of all the blocks and cache the results
+                    logger.info("No cached OCR results found, running OCR on entire page...")
+                    self.ocr.initialize(self.main_page, source_lang)
+                    all_blocks = [blk.deep_copy() for blk in self.main_page.blk_list]
+                    
+                    if all_blocks:  
+                        self.ocr.process(image, all_blocks)
+                        self._cache_ocr_results(cache_key, all_blocks)
+                        cached_text = self._get_cached_text_for_block(cache_key, blk)
+                        blk.text = cached_text
+                        logger.info(f"Cached OCR results and extracted text for block: {cached_text}")
             else:
-                self.ocr.process(image, self.main_page.blk_list)
-                print("Block Length: ", len(self.main_page.blk_list))
+                # For full page OCR, run normally and cache results
+                self.ocr.initialize(self.main_page, source_lang)
+                if self.main_page.blk_list:  
+                    self.ocr.process(image, self.main_page.blk_list)
+                    self._cache_ocr_results(cache_key, self.main_page.blk_list)
+                    logger.info("Block Length: %d", len(self.main_page.blk_list))
 
     def translate_image(self, single_block=False):
         source_lang = self.main_page.s_combo.currentText()
@@ -138,16 +264,44 @@ class ComicTranslatePipeline:
             settings_page = self.main_page.settings_page
             image = self.main_page.image_viewer.get_cv2_image()
             extra_context = settings_page.get_llm_settings()['extra_context']
+            translator_key = settings_page.get_tool_selection('translator')
 
             upper_case = settings_page.ui.uppercase_checkbox.isChecked()
 
             translator = Translator(self.main_page, source_lang, target_lang)
+            
+            # Get translation cache key
+            translation_cache_key = self._get_translation_cache_key(
+                image, source_lang, target_lang, translator_key, extra_context
+            )
+            
             if single_block:
                 blk = self.get_selected_block()
-                translator.translate([blk], image, extra_context)
+                if blk is None:
+                    return
+                
+                # Check if we have cached translation results for this image/translator/language combination
+                if self._is_translation_cached(translation_cache_key):
+                    cached_translation = self._get_cached_translation_for_block(translation_cache_key, blk)
+                    blk.translation = cached_translation
+                    logger.info(f"Using cached translation result for block: {cached_translation}")
+                else:
+                    # Run translation on a deep copies of all the blocks and cache the results
+                    logger.info("No cached translation results found, running translation on entire page...")
+                    all_blocks = [blk.deep_copy() for blk in self.main_page.blk_list]
+                    
+                    if all_blocks:  
+                        translator.translate(all_blocks, image, extra_context)
+                        self._cache_translation_results(translation_cache_key, all_blocks)
+                        cached_translation = self._get_cached_translation_for_block(translation_cache_key, blk)
+                        blk.translation = cached_translation
+                        logger.info(f"Cached translation results and extracted translation for block: {cached_translation}")
+                
                 set_upper_case([blk], upper_case)
             else:
+                # For full page translation, run normally and cache results
                 translator.translate(self.main_page.blk_list, image, extra_context)
+                self._cache_translation_results(translation_cache_key, self.main_page.blk_list)
                 set_upper_case(self.main_page.blk_list, upper_case)
 
     def skip_save(self, directory, timestamp, base_name, extension, archive_bname, image):
@@ -156,9 +310,11 @@ class ComicTranslatePipeline:
             os.makedirs(path, exist_ok=True)
         cv2.imwrite(os.path.join(path, f"{base_name}_translated{extension}"), image)
 
-    def log_skipped_image(self, directory, timestamp, image_path):
-        with open(os.path.join(directory, f"comic_translate_{timestamp}", "skipped_images.txt"), 'a', encoding='UTF-8') as file:
+    def log_skipped_image(self, directory, timestamp, image_path, reason=""):
+        skipped_file = os.path.join(directory, f"comic_translate_{timestamp}", "skipped_images.txt")
+        with open(skipped_file, 'a', encoding='UTF-8') as file:
             file.write(image_path + "\n")
+            file.write(reason + "\n\n")
 
     def batch_process(self, selected_paths: List[str] = None):
         timestamp = datetime.now().strftime("%b-%d-%Y_%I-%M-%S%p")
@@ -203,7 +359,7 @@ class ComicTranslatePipeline:
             state = self.main_page.image_states.get(image_path, {})
             if state.get('skip', False):
                 self.skip_save(directory, timestamp, base_name, extension, archive_bname, image)
-                self.log_skipped_image(directory, timestamp, image_path)
+                self.log_skipped_image(directory, timestamp, image_path, "User-skipped")
                 continue
 
             # Text Block Detection
@@ -229,17 +385,28 @@ class ComicTranslatePipeline:
                     source_lang_english = self.main_page.lang_mapping.get(source_lang, source_lang)
                     rtl = True if source_lang_english == 'Japanese' else False
                     blk_list = sort_blk_list(blk_list, rtl)
+                    
                 except Exception as e:
-                    error_message = str(e)
-                    print(error_message)
+                    # if it's an HTTPError, try to pull the "error_description" field
+                    if isinstance(e, requests.exceptions.HTTPError):
+                        try:
+                            err_json = e.response.json()
+                            err_msg = err_json.get("error_description", str(e))
+                        except Exception:
+                            err_msg = str(e)
+                    else:
+                        err_msg = str(e)
+
+                    logger.error(err_msg)
+                    reason = f"OCR: {err_msg}"
                     self.skip_save(directory, timestamp, base_name, extension, archive_bname, image)
-                    self.main_page.image_skipped.emit(image_path, "OCR", error_message)
-                    self.log_skipped_image(directory, timestamp, image_path)
+                    self.main_page.image_skipped.emit(image_path, "OCR", err_msg)
+                    self.log_skipped_image(directory, timestamp, image_path, reason)
                     continue
             else:
                 self.skip_save(directory, timestamp, base_name, extension, archive_bname, image)
                 self.main_page.image_skipped.emit(image_path, "Text Blocks", "")
-                self.log_skipped_image(directory, timestamp, image_path)
+                self.log_skipped_image(directory, timestamp, image_path, "No text blocks detected")
                 continue
 
             self.main_page.progress_update.emit(index, total_images, 3, 10, False)
@@ -287,15 +454,34 @@ class ComicTranslatePipeline:
 
             # Get Translations/ Export if selected
             extra_context = settings_page.get_llm_settings()['extra_context']
+            translator_key = settings_page.get_tool_selection('translator')
             translator = Translator(self.main_page, source_lang, target_lang)
+            
+            # Get translation cache key for batch processing
+            translation_cache_key = self._get_translation_cache_key(
+                image, source_lang, target_lang, translator_key, extra_context
+            )
+            
             try:
                 translator.translate(blk_list, image, extra_context)
+                # Cache the translation results for potential future use
+                self._cache_translation_results(translation_cache_key, blk_list)
             except Exception as e:
-                error_message = str(e)
-                print(error_message)
+                # if it's an HTTPError, try to pull the "error_description" field
+                if isinstance(e, requests.exceptions.HTTPError):
+                    try:
+                        err_json = e.response.json()
+                        err_msg = err_json.get("error_description", str(e))
+                    except Exception:
+                        err_msg = str(e)
+                else:
+                    err_msg = str(e)
+
+                logger.error(err_msg)
+                reason = f"Translator: {err_msg}"
                 self.skip_save(directory, timestamp, base_name, extension, archive_bname, image)
-                self.main_page.image_skipped.emit(image_path, "Translator", error_message)
-                self.log_skipped_image(directory, timestamp, image_path)
+                self.main_page.image_skipped.emit(image_path, "Translator", err_msg)
+                self.log_skipped_image(directory, timestamp, image_path, reason)
                 continue
 
             entire_raw_text = get_raw_text(blk_list)
@@ -309,14 +495,15 @@ class ComicTranslatePipeline:
                 if (not raw_text_obj) or (not translated_text_obj):
                     self.skip_save(directory, timestamp, base_name, extension, archive_bname, image)
                     self.main_page.image_skipped.emit(image_path, "Translator", "")
-                    self.log_skipped_image(directory, timestamp, image_path)
+                    self.log_skipped_image(directory, timestamp, image_path, "Translator: empty JSON")
                     continue
             except json.JSONDecodeError as e:
                 # Handle invalid JSON
                 error_message = str(e)
+                reason = f"Translator: JSONDecodeError: {error_message}"
                 self.skip_save(directory, timestamp, base_name, extension, archive_bname, image)
                 self.main_page.image_skipped.emit(image_path, "Translator", error_message)
-                self.log_skipped_image(directory, timestamp, image_path)
+                self.log_skipped_image(directory, timestamp, image_path, reason)
                 continue
 
             if export_settings['export_raw_text']:
