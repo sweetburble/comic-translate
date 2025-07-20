@@ -34,7 +34,7 @@ class ComicTranslatePipeline:
         self.cached_inpainter_key = None
         self.ocr = OCRProcessor()
         self.ocr_cache = {} # OCR results cache: {(image_hash, model_key, source_lang): {block_id: text}}
-        self.translation_cache = {} # Translation results cache: {(image_hash, translator_key, source_lang, target_lang, extra_context): {block_id: translation}}
+        self.translation_cache = {} # Translation results cache: {(image_hash, translator_key, source_lang, target_lang, extra_context): {block_id: {source_text: str, translation: str}}}
 
     def clear_ocr_cache(self):
         """Clear the OCR cache. Note: Cache now persists across image and model changes automatically."""
@@ -82,7 +82,6 @@ class ComicTranslatePipeline:
         self.main_page.blk_list = blk_list
         if load_rects:
             self.load_box_coords(blk_list)
-
 
     def manual_inpaint(self):
         image_viewer = self.main_page.image_viewer
@@ -158,37 +157,146 @@ class ComicTranslatePipeline:
 
     def _get_block_id(self, block):
         """Generate a unique identifier for a text block based on its position"""
-        # Use the block's bounding box coordinates as a unique identifier
         try:
             x1, y1, x2, y2 = block.xyxy
-            return f"{x1}_{y1}_{x2}_{y2}"
+            angle = block.angle
+            return f"{int(x1)}_{int(y1)}_{int(x2)}_{int(y2)}_{int(angle)}"
         except (AttributeError, ValueError, TypeError):
             # Fallback: use object id if xyxy is not available or malformed
             return str(id(block))
+
+    def _find_matching_block_id(self, cache_key, target_block):
+        """Find a matching block ID in cache, allowing for small coordinate differences"""
+        target_id = self._get_block_id(target_block)
+        cached_results = self.ocr_cache.get(cache_key, {})
+        
+        # First try exact match
+        if target_id in cached_results:
+            return target_id, cached_results[target_id]
+        
+        # If no exact match, try fuzzy matching for coordinates within tolerance
+        try:
+            target_x1, target_y1, target_x2, target_y2 = target_block.xyxy
+            target_angle = getattr(target_block, 'angle', 0)
+            
+            # Tolerance for coordinate matching (in pixels)
+            tolerance = 5.0
+            
+            for cached_id in cached_results.keys():
+                try:
+                    # Parse the cached ID to extract coordinates
+                    parts = cached_id.split('_')
+                    if len(parts) >= 5:
+                        cached_x1 = float(parts[0])
+                        cached_y1 = float(parts[1])
+                        cached_x2 = float(parts[2])
+                        cached_y2 = float(parts[3])
+                        cached_angle = float(parts[4])
+                        
+                        # Check if coordinates are within tolerance
+                        if (abs(target_x1 - cached_x1) <= tolerance and
+                            abs(target_y1 - cached_y1) <= tolerance and
+                            abs(target_x2 - cached_x2) <= tolerance and
+                            abs(target_y2 - cached_y2) <= tolerance and
+                            abs(target_angle - cached_angle) <= 1.0):  # 1 degree tolerance for angle
+                            
+                            logger.debug(f"Fuzzy match found for OCR: {target_id[:20]}... -> {cached_id[:20]}...")
+                            return cached_id, cached_results[cached_id]
+                except (ValueError, IndexError):
+                    continue
+                    
+        except (AttributeError, ValueError, TypeError):
+            pass
+        
+        # No match found
+        return None, ""
+
+    def _find_matching_translation_block_id(self, cache_key, target_block):
+        """Find a matching block ID in translation cache, allowing for small coordinate differences"""
+        target_id = self._get_block_id(target_block)
+        cached_results = self.translation_cache.get(cache_key, {})
+        
+        # First try exact match
+        if target_id in cached_results:
+            return target_id, cached_results[target_id]
+        
+        # If no exact match, try fuzzy matching for coordinates within tolerance
+        try:
+            target_x1, target_y1, target_x2, target_y2 = target_block.xyxy
+            target_angle = getattr(target_block, 'angle', 0)
+            
+            # Tolerance for coordinate matching (in pixels)
+            tolerance = 5.0
+            
+            for cached_id in cached_results.keys():
+                try:
+                    # Parse the cached ID to extract coordinates
+                    parts = cached_id.split('_')
+                    if len(parts) >= 5:
+                        cached_x1 = float(parts[0])
+                        cached_y1 = float(parts[1])
+                        cached_x2 = float(parts[2])
+                        cached_y2 = float(parts[3])
+                        cached_angle = float(parts[4])
+                        
+                        # Check if coordinates are within tolerance
+                        if (abs(target_x1 - cached_x1) <= tolerance and
+                            abs(target_y1 - cached_y1) <= tolerance and
+                            abs(target_x2 - cached_x2) <= tolerance and
+                            abs(target_y2 - cached_y2) <= tolerance and
+                            abs(target_angle - cached_angle) <= 1.0):  # 1 degree tolerance for angle
+                            
+                            logger.debug(f"Fuzzy match found for translation: {target_id[:20]}... -> {cached_id[:20]}...")
+                            return cached_id, cached_results[cached_id]
+                except (ValueError, IndexError):
+                    continue
+                    
+        except (AttributeError, ValueError, TypeError):
+            pass
+        
+        # No match found
+        return None, ""
 
     def _is_ocr_cached(self, cache_key):
         """Check if OCR results are cached for this image/model/language combination"""
         return cache_key in self.ocr_cache
 
-    def _cache_ocr_results(self, cache_key, blk_list):
+    def _cache_ocr_results(self, cache_key, blk_list, processed_blk_list=None):
         """Cache OCR results for all blocks"""
         try:
             block_results = {}
-            for blk in blk_list:
-                block_id = self._get_block_id(blk)
-                # Ensure we have text to cache, use empty string if None
-                text = getattr(blk, 'text', '') or ''
-                block_results[block_id] = text
+            # If we have separate processed blocks (with OCR results), use them for text
+            # but use original blocks for consistent IDs
+            if processed_blk_list is not None:
+                for original_blk, processed_blk in zip(blk_list, processed_blk_list):
+                    block_id = self._get_block_id(original_blk)  # Use original block for ID
+                    text = getattr(processed_blk, 'text', '') or ''  # Get text from processed block
+                    block_results[block_id] = text
+            else:
+                # Standard case: use the same blocks for both ID and text
+                for blk in blk_list:
+                    block_id = self._get_block_id(blk)
+                    text = getattr(blk, 'text', '') or ''
+                    block_results[block_id] = text
+            
             self.ocr_cache[cache_key] = block_results
+            logger.info(f"Cached OCR results for {len(block_results)} blocks")
         except Exception as e:
             logger.warning(f"Failed to cache OCR results: {e}")
             # Don't raise exception, just skip caching
 
     def _get_cached_text_for_block(self, cache_key, block):
         """Retrieve cached text for a specific block"""
-        block_id = self._get_block_id(block)
-        cached_results = self.ocr_cache.get(cache_key, {})
-        return cached_results.get(block_id, "")
+        matched_id, result = self._find_matching_block_id(cache_key, block)
+        
+        # Debug logging to help identify cache issues (only log when not found)
+        if not result:
+            block_id = self._get_block_id(block)
+            cached_results = self.ocr_cache.get(cache_key, {})
+            logger.debug(f"No cached text found for block ID {block_id}")
+            logger.debug(f"Available block IDs in cache: {list(cached_results.keys())}")
+        
+        return result
 
     def _get_translation_cache_key(self, image, source_lang, target_lang, translator_key, extra_context):
         """Generate cache key for translation results"""
@@ -201,25 +309,100 @@ class ComicTranslatePipeline:
         """Check if translation results are cached for this image/translator/language combination"""
         return cache_key in self.translation_cache
 
-    def _cache_translation_results(self, cache_key, blk_list):
+    def _cache_translation_results(self, cache_key, blk_list, processed_blk_list=None):
         """Cache translation results for all blocks"""
         try:
             block_results = {}
-            for blk in blk_list:
-                block_id = self._get_block_id(blk)
-                # Ensure we have translation to cache, use empty string if None
-                translation = getattr(blk, 'translation', '') or ''
-                block_results[block_id] = translation
+            # If we have separate processed blocks (with translation results), use them for translation
+            # but use original blocks for consistent IDs
+            if processed_blk_list is not None:
+                for original_blk, processed_blk in zip(blk_list, processed_blk_list):
+                    block_id = self._get_block_id(original_blk)  # Use original block for ID
+                    translation = getattr(processed_blk, 'translation', '') or ''  # Get translation from processed block
+                    source_text = getattr(original_blk, 'text', '') or ''  # Get source text from original block
+                    # Store both source text and translation to validate cache validity
+                    block_results[block_id] = {
+                        'source_text': source_text,
+                        'translation': translation
+                    }
+            else:
+                # Standard case: use the same blocks for both ID and translation
+                for blk in blk_list:
+                    block_id = self._get_block_id(blk)
+                    translation = getattr(blk, 'translation', '') or ''
+                    source_text = getattr(blk, 'text', '') or ''
+                    # Store both source text and translation to validate cache validity
+                    block_results[block_id] = {
+                        'source_text': source_text,
+                        'translation': translation
+                    }
+            
             self.translation_cache[cache_key] = block_results
+            logger.info(f"Cached translation results for {len(block_results)} blocks")
         except Exception as e:
             logger.warning(f"Failed to cache translation results: {e}")
             # Don't raise exception, just skip caching
 
     def _get_cached_translation_for_block(self, cache_key, block):
-        """Retrieve cached translation for a specific block"""
-        block_id = self._get_block_id(block)
-        cached_results = self.translation_cache.get(cache_key, {})
-        return cached_results.get(block_id, "")
+        """Retrieve cached translation for a specific block, validating source text matches"""
+        matched_id, result = self._find_matching_translation_block_id(cache_key, block)
+
+        if result:
+            cached_source_text = result.get('source_text', '')
+            current_source_text = getattr(block, 'text', '') or ''
+            
+            if cached_source_text == current_source_text:
+                return result.get('translation', '')
+            else:
+                # Source text has changed, cache is invalid for this block
+                logger.debug(f"Cache invalid: source text changed from '{cached_source_text}' to '{current_source_text}'")
+                return ""
+        else:
+            # Debug logging to help identify cache issues (only log when not found)
+            block_id = self._get_block_id(block)
+            cached_results = self.translation_cache.get(cache_key, {})
+            logger.debug(f"No cached translation found for block ID {block_id}")
+            logger.debug(f"Available block IDs in cache: {list(cached_results.keys())}")
+        
+        return ""
+
+    def _can_serve_all_blocks_from_ocr_cache(self, cache_key, block_list):
+        """Check if all blocks in the list can be served from OCR cache"""
+        if not self._is_ocr_cached(cache_key):
+            return False
+        
+        for block in block_list:
+            cached_text = self._get_cached_text_for_block(cache_key, block)
+            if not cached_text:  # If any block is missing from cache
+                return False
+        
+        return True
+
+    def _can_serve_all_blocks_from_translation_cache(self, cache_key, block_list):
+        """Check if all blocks in the list can be served from translation cache with matching source text"""
+        if not self._is_translation_cached(cache_key):
+            return False
+        
+        for block in block_list:
+            cached_translation = self._get_cached_translation_for_block(cache_key, block)
+            if not cached_translation:  # If any block is missing from cache or source text doesn't match
+                return False
+        
+        return True
+
+    def _apply_cached_ocr_to_blocks(self, cache_key, block_list):
+        """Apply cached OCR results to all blocks in the list"""
+        for block in block_list:
+            cached_text = self._get_cached_text_for_block(cache_key, block)
+            if cached_text:
+                block.text = cached_text
+
+    def _apply_cached_translations_to_blocks(self, cache_key, block_list):
+        """Apply cached translation results to all blocks in the list"""
+        for block in block_list:
+            cached_translation = self._get_cached_translation_for_block(cache_key, block)
+            if cached_translation:
+                block.translation = cached_translation
 
     def OCR_image(self, single_block=False):
         source_lang = self.main_page.s_combo.currentText()
@@ -232,30 +415,69 @@ class ComicTranslatePipeline:
                 if blk is None:
                     return
                 
+                # Check if block already has text to avoid redundant processing
+                if hasattr(blk, 'text') and blk.text and blk.text.strip():
+                    return
+                
                 # Check if we have cached results for this image/model/language
                 if self._is_ocr_cached(cache_key):
                     cached_text = self._get_cached_text_for_block(cache_key, blk)
-                    blk.text = cached_text
-                    logger.info(f"Using cached OCR result for block: {cached_text}")
+                    if cached_text:  # Only use cache if we actually found text for this block
+                        blk.text = cached_text
+                        logger.info(f"Using cached OCR result for block: {cached_text}")
+                        return
+                    else:
+                        logger.info("Block not found in cache, processing single block...")
+                        # Process just this single block
+                        self.ocr.initialize(self.main_page, source_lang)
+                        single_block_list = [blk]
+                        self.ocr.process(image, single_block_list)
+                        
+                        # Update the cache with this new result
+                        if cache_key in self.ocr_cache:
+                            block_id = self._get_block_id(blk)
+                            text = getattr(blk, 'text', '') or ''
+                            self.ocr_cache[cache_key][block_id] = text
+                        else:
+                            # This shouldn't happen, but handle it gracefully
+                            self._cache_ocr_results(cache_key, single_block_list)
+                        
+                        logger.info(f"Processed single block and updated cache: {blk.text}")
                 else:
-                    # Run OCR on a deep copies of all the blocks and cache the results
+                    # Run OCR on all blocks and cache the results
                     logger.info("No cached OCR results found, running OCR on entire page...")
                     self.ocr.initialize(self.main_page, source_lang)
-                    all_blocks = [blk.deep_copy() for blk in self.main_page.blk_list]
+                    # Create a mapping between original blocks and their copies
+                    original_to_copy = {}
+                    all_blocks_copy = []
                     
-                    if all_blocks:  
-                        self.ocr.process(image, all_blocks)
-                        self._cache_ocr_results(cache_key, all_blocks)
+                    for original_blk in self.main_page.blk_list:
+                        copy_blk = original_blk.deep_copy()
+                        all_blocks_copy.append(copy_blk)
+                        # Use the original block's ID as the key for mapping
+                        original_id = self._get_block_id(original_blk)
+                        original_to_copy[original_id] = copy_blk
+                    
+                    if all_blocks_copy:  
+                        self.ocr.process(image, all_blocks_copy)
+                        # Cache using the original blocks to maintain consistent IDs
+                        self._cache_ocr_results(cache_key, self.main_page.blk_list, all_blocks_copy)
                         cached_text = self._get_cached_text_for_block(cache_key, blk)
                         blk.text = cached_text
                         logger.info(f"Cached OCR results and extracted text for block: {cached_text}")
             else:
-                # For full page OCR, run normally and cache results
-                self.ocr.initialize(self.main_page, source_lang)
-                if self.main_page.blk_list:  
-                    self.ocr.process(image, self.main_page.blk_list)
-                    self._cache_ocr_results(cache_key, self.main_page.blk_list)
-                    logger.info("Block Length: %d", len(self.main_page.blk_list))
+                # For full page OCR, check if we can use cached results
+                if self._can_serve_all_blocks_from_ocr_cache(cache_key, self.main_page.blk_list):
+                    # All blocks can be served from cache
+                    self._apply_cached_ocr_to_blocks(cache_key, self.main_page.blk_list)
+                    logger.info(f"Using cached OCR results for all {len(self.main_page.blk_list)} blocks")
+                else:
+                    # Need to run OCR and cache results
+                    self.ocr.initialize(self.main_page, source_lang)
+                    if self.main_page.blk_list:  
+                        self.ocr.process(image, self.main_page.blk_list)
+                        self._cache_ocr_results(cache_key, self.main_page.blk_list)
+                        logger.info("OCR completed and cached for %d blocks", len(self.main_page.blk_list))
 
     def translate_image(self, single_block=False):
         source_lang = self.main_page.s_combo.currentText()
@@ -280,28 +502,71 @@ class ComicTranslatePipeline:
                 if blk is None:
                     return
                 
+                # Check if block already has translation to avoid redundant processing
+                if hasattr(blk, 'translation') and blk.translation and blk.translation.strip():
+                    return
+                
                 # Check if we have cached translation results for this image/translator/language combination
                 if self._is_translation_cached(translation_cache_key):
                     cached_translation = self._get_cached_translation_for_block(translation_cache_key, blk)
-                    blk.translation = cached_translation
-                    logger.info(f"Using cached translation result for block: {cached_translation}")
+                    if cached_translation:  # Only use cache if we actually found translation for this block and source text matches
+                        blk.translation = cached_translation
+                        logger.info(f"Using cached translation result for block: {cached_translation}")
+                        set_upper_case([blk], upper_case)
+                        return
+                    else:
+                        logger.info("Block not found in cache or source text changed, processing single block...")
+                        # Process just this single block
+                        single_block_list = [blk]
+                        translator.translate(single_block_list, image, extra_context)
+                        
+                        # Update the cache with this new result
+                        if translation_cache_key in self.translation_cache:
+                            block_id = self._get_block_id(blk)
+                            translation = getattr(blk, 'translation', '') or ''
+                            source_text = getattr(blk, 'text', '') or ''
+                            # Update with new format including source text
+                            self.translation_cache[translation_cache_key][block_id] = {
+                                'source_text': source_text,
+                                'translation': translation
+                            }
+                        else:
+                            # This shouldn't happen, but handle it gracefully
+                            self._cache_translation_results(translation_cache_key, single_block_list)
+                        
+                        logger.info(f"Processed single block and updated cache: {blk.translation}")
+                        set_upper_case([blk], upper_case)
                 else:
-                    # Run translation on a deep copies of all the blocks and cache the results
+                    # Run translation on all blocks and cache the results
                     logger.info("No cached translation results found, running translation on entire page...")
-                    all_blocks = [blk.deep_copy() for blk in self.main_page.blk_list]
+                    # Create a mapping between original blocks and their copies
+                    all_blocks_copy = []
                     
-                    if all_blocks:  
-                        translator.translate(all_blocks, image, extra_context)
-                        self._cache_translation_results(translation_cache_key, all_blocks)
+                    for original_blk in self.main_page.blk_list:
+                        copy_blk = original_blk.deep_copy()
+                        all_blocks_copy.append(copy_blk)
+                    
+                    if all_blocks_copy:  
+                        translator.translate(all_blocks_copy, image, extra_context)
+                        # Cache using the original blocks to maintain consistent IDs
+                        self._cache_translation_results(translation_cache_key, self.main_page.blk_list, all_blocks_copy)
                         cached_translation = self._get_cached_translation_for_block(translation_cache_key, blk)
                         blk.translation = cached_translation
                         logger.info(f"Cached translation results and extracted translation for block: {cached_translation}")
-                
-                set_upper_case([blk], upper_case)
+                    
+                    set_upper_case([blk], upper_case)
             else:
-                # For full page translation, run normally and cache results
-                translator.translate(self.main_page.blk_list, image, extra_context)
-                self._cache_translation_results(translation_cache_key, self.main_page.blk_list)
+                # For full page translation, check if we can use cached results
+                if self._can_serve_all_blocks_from_translation_cache(translation_cache_key, self.main_page.blk_list):
+                    # All blocks can be served from cache with matching source text
+                    self._apply_cached_translations_to_blocks(translation_cache_key, self.main_page.blk_list)
+                    logger.info(f"Using cached translation results for all {len(self.main_page.blk_list)} blocks")
+                else:
+                    # Need to run translation and cache results
+                    translator.translate(self.main_page.blk_list, image, extra_context)
+                    self._cache_translation_results(translation_cache_key, self.main_page.blk_list)
+                    logger.info("Translation completed and cached for %d blocks", len(self.main_page.blk_list))
+                
                 set_upper_case(self.main_page.blk_list, upper_case)
 
     def skip_save(self, directory, timestamp, base_name, extension, archive_bname, image):
