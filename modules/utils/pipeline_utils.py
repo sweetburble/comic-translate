@@ -209,13 +209,12 @@ def validate_ocr(main_page, source_lang):
 
     # Helper to check authentication or credential
     def has_access(service, key_field):
-        return bool(credentials.get(service, {}).get(key_field)))
+        return bool(credentials.get(service, {}).get(key_field))
 
     # Microsoft OCR: needs api_key_ocr and endpoint
     if ocr_tool == tr("Microsoft OCR"):
         service = tr("Microsoft Azure")
-        if not (settings_page.is_logged_in() or
-                (credentials.get(service, {}).get('api_key_ocr') and
+        if not ((credentials.get(service, {}).get('api_key_ocr') and
                  credentials.get(service, {}).get('endpoint'))):
             Messages.show_signup_or_credentials_error(main_page)
             return False

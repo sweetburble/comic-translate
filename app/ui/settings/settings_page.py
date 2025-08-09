@@ -10,12 +10,12 @@ from .settings_ui import SettingsPageUI
 
 # Dictionary to map old model names to the newest versions in settings
 OCR_MIGRATIONS = {
-    "GPT-4o":       "GPT-4.1-mini",
+    "GPT-4o": "GPT-4.1-mini",
 }
 
 TRANSLATOR_MIGRATIONS = {
-    "GPT-4o":              "GPT-4.1",
-    "GPT-4o mini":         "GPT-4.1-mini",
+    "GPT-4o": "GPT-4.1",
+    "GPT-4o mini": "GPT-4.1-mini",
 }
 
 class SettingsPage(QtWidgets.QWidget):
