@@ -455,7 +455,7 @@ class SettingsPageUI(QtWidgets.QWidget):
                 api_key_input = MLineEdit()
                 api_key_input.setEchoMode(QtWidgets.QLineEdit.Password)
                 api_key_input.setFixedWidth(400)
-                api_key_prefix = MLabel(self.tr("API Key")).border()
+                api_key_prefix = MLabel(self.tr("Secret Key")).border()
                 self.set_label_width(api_key_prefix)
                 api_key_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
                 api_key_input.set_prefix_widget(api_key_prefix)
@@ -757,6 +757,27 @@ class SettingsPageUI(QtWidgets.QWidget):
         export_layout.addWidget(self.raw_text_checkbox)
         export_layout.addWidget(self.translated_text_checkbox)
         export_layout.addWidget(self.inpainted_image_checkbox)
+
+        # Add JPEG Quality section
+        export_layout.addSpacing(20)
+        jpeg_quality_label = MLabel(self.tr("JPEG Quality")).h4()
+        export_layout.addWidget(jpeg_quality_label)
+        
+        jpeg_quality_layout = QtWidgets.QHBoxLayout()
+        self.jpeg_quality_spinbox = MSpinBox()
+        self.jpeg_quality_spinbox.setRange(1, 100)
+        self.jpeg_quality_spinbox.setValue(95)
+        self.jpeg_quality_spinbox.setSuffix("%")
+        self.jpeg_quality_spinbox.setFixedWidth(80)
+        
+        jpeg_quality_layout.addWidget(MLabel(self.tr("Quality:")))
+        jpeg_quality_layout.addWidget(self.jpeg_quality_spinbox)
+        jpeg_quality_layout.addStretch(1)
+        export_layout.addLayout(jpeg_quality_layout)
+        
+        export_layout.addSpacing(20)
+        file_conversion_label = MLabel(self.tr("File Format Conversion")).h4()
+        export_layout.addWidget(file_conversion_label)
 
         self.from_file_types = ['pdf', 'epub', 'cbr', 'cbz', 'cb7', 'cbt', 'zip', 'rar']
         available_file_types = ['pdf', 'cbz', 'cb7', 'zip']  # Exclude 'CBR' and add other types

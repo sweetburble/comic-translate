@@ -21,6 +21,7 @@ TRANSLATOR_MIGRATIONS = {
 class SettingsPage(QtWidgets.QWidget):
     theme_changed = Signal(str)
     font_imported = Signal(str)
+    jpeg_quality_changed = Signal(int)
 
     def __init__(self, parent=None):
         super(SettingsPage, self).__init__(parent)
@@ -38,9 +39,20 @@ class SettingsPage(QtWidgets.QWidget):
         self.ui.theme_combo.currentTextChanged.connect(self.on_theme_changed)
         self.ui.lang_combo.currentTextChanged.connect(self.on_language_changed)
         self.ui.font_browser.sig_files_changed.connect(self.import_font)
+        self.ui.jpeg_quality_spinbox.valueChanged.connect(self.on_jpeg_quality_changed)
 
     def on_theme_changed(self, theme: str):
         self.theme_changed.emit(theme)
+
+    def on_jpeg_quality_changed(self, value: int):
+        if not self._loading_settings:  # Avoid emitting during initial load
+            # Save the setting immediately
+            settings = QSettings("ComicLabs", "ComicTranslate")
+            settings.beginGroup('export')
+            settings.setValue('jpeg_quality', value)
+            settings.endGroup()
+            # Emit signal for any listeners
+            self.jpeg_quality_changed.emit(value)
 
     def get_language(self):
         return self.ui.lang_combo.currentText()
@@ -74,6 +86,7 @@ class SettingsPage(QtWidgets.QWidget):
             'export_raw_text': self.ui.raw_text_checkbox.isChecked(),
             'export_translated_text': self.ui.translated_text_checkbox.isChecked(),
             'export_inpainted_image': self.ui.inpainted_image_checkbox.isChecked(),
+            'jpeg_quality': self.ui.jpeg_quality_spinbox.value(),
             'save_as': {}
         }
         for file_type in self.ui.from_file_types:
@@ -109,7 +122,7 @@ class SettingsPage(QtWidgets.QWidget):
 
         # no `service` passed → recurse over all known services
         return {s: self.get_credentials(s) for s in self.ui.credential_services}
-
+        
     def get_hd_strategy_settings(self):
         strategy = self.ui.inpaint_strategy_combo.currentText()
         settings = {
@@ -139,7 +152,7 @@ class SettingsPage(QtWidgets.QWidget):
             'llm': self.get_llm_settings(),
             'export': self.get_export_settings(),
             'credentials': self.get_credentials(),
-            'save_keys': self.ui.save_keys_checkbox.isChecked()
+            'save_keys': self.ui.save_keys_checkbox.isChecked(),
         }
 
     def import_font(self, file_paths: List[str]):
@@ -222,6 +235,9 @@ class SettingsPage(QtWidgets.QWidget):
                     settings.setValue(f"{translated_service}_api_key", cred['api_key'])
                     settings.setValue(f"{translated_service}_api_url", cred['api_url'])
                     settings.setValue(f"{translated_service}_model", cred['model'])
+                elif translated_service == "Yandex":
+                    settings.setValue(f"{translated_service}_api_key", cred['api_key'])
+                    settings.setValue(f"{translated_service}_folder_id", cred['folder_id'])
                 else:
                     settings.setValue(f"{translated_service}_api_key", cred['api_key'])
         else:
@@ -295,6 +311,7 @@ class SettingsPage(QtWidgets.QWidget):
         self.ui.raw_text_checkbox.setChecked(settings.value('export_raw_text', False, type=bool))
         self.ui.translated_text_checkbox.setChecked(settings.value('export_translated_text', False, type=bool))
         self.ui.inpainted_image_checkbox.setChecked(settings.value('export_inpainted_image', False, type=bool))
+        self.ui.jpeg_quality_spinbox.setValue(settings.value('jpeg_quality', 95, type=int))
         settings.beginGroup('save_as')
         for file_type in ['.pdf', '.epub', '.cbr', '.cbz', '.cb7', '.cbt']:
             self.ui.export_widgets[f'{file_type}_save_as'].setCurrentText(settings.value(file_type, file_type[1:]))
@@ -307,7 +324,7 @@ class SettingsPage(QtWidgets.QWidget):
         self.ui.save_keys_checkbox.setChecked(save_keys)
         if save_keys:
             for service in self.ui.credential_services:
-                translated_service = self.ui.reverse_mappings.get(service, service)
+                translated_service = self.ui.value_mappings.get(service, service)
                 if translated_service == "Microsoft Azure":
                     self.ui.credential_widgets["Microsoft Azure_api_key_ocr"].setText(settings.value(f"{translated_service}_api_key_ocr", ''))
                     self.ui.credential_widgets["Microsoft Azure_api_key_translator"].setText(settings.value(f"{translated_service}_api_key_translator", ''))
@@ -317,6 +334,9 @@ class SettingsPage(QtWidgets.QWidget):
                     self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
                     self.ui.credential_widgets[f"{service}_api_url"].setText(settings.value(f"{translated_service}_api_url", ''))
                     self.ui.credential_widgets[f"{service}_model"].setText(settings.value(f"{translated_service}_model", ''))
+                elif translated_service == "Yandex":
+                    self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
+                    self.ui.credential_widgets[f"{service}_folder_id"].setText(settings.value(f"{translated_service}_folder_id", ''))
                 else:
                     self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
         settings.endGroup()
