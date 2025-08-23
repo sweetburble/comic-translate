@@ -12,6 +12,7 @@ from .llm.gemini import GeminiTranslation
 from .llm.deepseek import DeepseekTranslation
 from .llm.grok import GrokTranslation
 from .llm.custom import CustomTranslation
+from .llm.cerebras import CerebrasTranslation
 
 
 class TranslationFactory:
@@ -34,6 +35,7 @@ class TranslationFactory:
         "Gemini": GeminiTranslation,
         "Deepseek": DeepseekTranslation,
         "Grok": GrokTranslation,
+        "Cerebras": CerebrasTranslation,
         "Custom": CustomTranslation
     }
     

@@ -112,6 +112,9 @@ class SettingsPage(QtWidgets.QWidget):
             elif service == "Custom":
                 for field in ("api_key", "api_url", "model"):
                     creds[field] = _text_or_none(f"Custom_{field}")
+            elif service == "Cerebras":
+                for field in ("api_key", "model"):
+                    creds[field] = _text_or_none(f"Cerebras_{field}")
             elif service == "Yandex":
                 creds['api_key'] = _text_or_none("Yandex_api_key")
                 creds['folder_id'] = _text_or_none("Yandex_folder_id")
@@ -235,6 +238,9 @@ class SettingsPage(QtWidgets.QWidget):
                     settings.setValue(f"{translated_service}_api_key", cred['api_key'])
                     settings.setValue(f"{translated_service}_api_url", cred['api_url'])
                     settings.setValue(f"{translated_service}_model", cred['model'])
+                elif translated_service == "Cerebras":
+                    settings.setValue(f"{translated_service}_api_key", cred['api_key'])
+                    settings.setValue(f"{translated_service}_model", cred['model'])
                 elif translated_service == "Yandex":
                     settings.setValue(f"{translated_service}_api_key", cred['api_key'])
                     settings.setValue(f"{translated_service}_folder_id", cred['folder_id'])
@@ -333,6 +339,9 @@ class SettingsPage(QtWidgets.QWidget):
                 elif translated_service == "Custom":
                     self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
                     self.ui.credential_widgets[f"{service}_api_url"].setText(settings.value(f"{translated_service}_api_url", ''))
+                    self.ui.credential_widgets[f"{service}_model"].setText(settings.value(f"{translated_service}_model", ''))
+                elif translated_service == "Cerebras":
+                    self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
                     self.ui.credential_widgets[f"{service}_model"].setText(settings.value(f"{translated_service}_model", ''))
                 elif translated_service == "Yandex":
                     self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))

@@ -65,6 +65,7 @@ class Translator:
             self.settings.ui.tr("Gemini-2.5-Flash"): "Gemini-2.5-Flash",
             self.settings.ui.tr("Gemini-2.5-Pro"): "Gemini-2.5-Pro",
             self.settings.ui.tr("Grok-3-Mini"): "Grok-3-Mini",
+            self.settings.ui.tr("Cerebras"): "Cerebras",
             self.settings.ui.tr("Google Translate"): "Google Translate",
             self.settings.ui.tr("Microsoft Translator"): "Microsoft Translator",
             self.settings.ui.tr("DeepL"): "DeepL",

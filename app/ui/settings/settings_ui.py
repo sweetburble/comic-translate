@@ -38,12 +38,12 @@ class SettingsPageUI(QtWidgets.QWidget):
         self.alignment = [self.tr("Left"), self.tr("Center"), self.tr("Right")]
 
         self.credential_services = [self.tr("Custom"), self.tr("Deepseek"), self.tr("Open AI GPT"), self.tr("Microsoft Azure"), self.tr("Google Cloud"), 
-                                    self.tr("Google Gemini"), self.tr("DeepL"), self.tr("Anthropic Claude"), self.tr("Yandex"), self.tr("Grok")]
+                                    self.tr("Google Gemini"), self.tr("DeepL"), self.tr("Anthropic Claude"), self.tr("Yandex"), self.tr("Grok"), self.tr("Cerebras")]
         
         self.supported_translators = [self.tr("GPT-4.1"), self.tr("GPT-4.1-mini"), self.tr("DeepL"), 
                                     self.tr("Claude-4-Sonnet"), self.tr("Claude-3.5-Haiku"), self.tr("Gemini-2.5-Flash-Lite"),
                                     self.tr("Gemini-2.5-Flash"), self.tr("Gemini-2.5-Pro"), self.tr("Yandex"), self.tr("Google Translate"),
-                                    self.tr("Microsoft Translator"), self.tr("Deepseek-v3"), self.tr("Grok-3-Mini"), self.tr("Custom"),]
+                                    self.tr("Microsoft Translator"), self.tr("Deepseek-v3"), self.tr("Grok-3-Mini"), self.tr("Custom"), self.tr("Cerebras")]
         
         self.languages = ['English', '한국어', 'Français', '日本語', 
          '简体中文', '繁體中文', 'русский', 'Deutsch', 
@@ -83,6 +83,7 @@ class SettingsPageUI(QtWidgets.QWidget):
             self.tr("Gemini-2.5-Flash"): "Gemini-2.5-Flash",
             self.tr("Gemini-2.5-Pro"): "Gemini-2.5-Pro",
             self.tr("Grok-3-Mini"): "Grok-3-Mini",
+            self.tr("Cerebras"): "Cerebras",
             self.tr("Yandex"): "Yandex",
             self.tr("Google Translate"): "Google Translate",
             self.tr("Microsoft Translator"): "Microsoft Translator",
@@ -121,6 +122,7 @@ class SettingsPageUI(QtWidgets.QWidget):
             self.tr("Anthropic Claude"): "Anthropic Claude",
             self.tr("Yandex"): "Yandex",
             self.tr("Grok"): "Grok",
+            self.tr("Cerebras"): "Cerebras",
         }
 
         # Create reverse mappings for loading
@@ -438,6 +440,30 @@ class SettingsPageUI(QtWidgets.QWidget):
                 service_layout.addWidget(endpoint_input)
                 
                 self.credential_widgets[f"{service}_api_url"] = endpoint_input
+
+                # Model Name
+                model_input = MLineEdit()
+                model_input.setFixedWidth(400)
+                model_prefix = MLabel(self.tr("Model")).border()
+                self.set_label_width(model_prefix)
+                model_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                model_input.set_prefix_widget(model_prefix)
+                service_layout.addWidget(model_input)
+                
+                self.credential_widgets[f"{service}_model"] = model_input
+            
+            elif service == "Cerebras":
+                # API Key
+                api_key_input = MLineEdit()
+                api_key_input.setEchoMode(QtWidgets.QLineEdit.Password)
+                api_key_input.setFixedWidth(400)
+                api_key_prefix = MLabel(self.tr("API Key")).border()
+                self.set_label_width(api_key_prefix)
+                api_key_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                api_key_input.set_prefix_widget(api_key_prefix)
+                service_layout.addWidget(api_key_input)
+                
+                self.credential_widgets[f"{service}_api_key"] = api_key_input
 
                 # Model Name
                 model_input = MLineEdit()
