@@ -1,6 +1,6 @@
 import os, sys
 import logging
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QFont
 from PySide6.QtCore import QSettings, QTranslator, QLocale
 from PySide6.QtWidgets import QApplication  
 from controller import ComicTranslate
