@@ -279,25 +279,41 @@ class TextBlockItem(QGraphicsTextItem):
         else:
             # Set global outline properties only when there's no selection
             self.outline = True if outline_color else False
-            
+
             if self.outline:
+                # enabling global outline: store color/width and target whole document
                 self.outline_color = outline_color
                 self.outline_width = outline_width
 
                 char_count = self.document().characterCount()
                 start = 0
-                end =  max(0, char_count - 1)
+                end = max(0, char_count - 1)
 
-        type = OutlineType.Full_Document if self.outline else OutlineType.Selection
+        # When disabling outlines (outline_color is falsy), remove the relevant outlines
+        if not outline_color:
+            if self.textCursor().hasSelection():
+                # Remove any outlines that contain the current selection range
+                self.selection_outlines = [
+                    outline for outline in self.selection_outlines
+                    if not (outline.start <= start and outline.end >= end)
+                ]
+            else:
+                # No selection: remove only full-document outlines
+                self.selection_outlines = [
+                    outline for outline in self.selection_outlines
+                    if outline.type != OutlineType.Full_Document
+                ]
+        else:
+            # Adding/updating an outline for the selection or whole document
+            type = OutlineType.Full_Document if self.outline else OutlineType.Selection
 
-        # Remove any existing outline for this selection range
-        self.selection_outlines = [
-            outline for outline in self.selection_outlines 
-            if not (outline.start == start and outline.end == end)
-        ]
-        
-        # Add new outline info if color is provided
-        if outline_color:
+            # Remove any existing outline for this exact selection range
+            self.selection_outlines = [
+                outline for outline in self.selection_outlines 
+                if not (outline.start == start and outline.end == end)
+            ]
+
+            # Add new outline info
             self.selection_outlines.append(
                 OutlineInfo(start, end, outline_color, outline_width, type)
             )
@@ -395,19 +411,6 @@ class TextBlockItem(QGraphicsTextItem):
         new_text = self.toPlainText()
         self.text_changed.emit(new_text)
         self.update_outlines()
-
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        self.last_selection = self.textCursor().selection()
-
-    def mouseReleaseEvent(self, event):
-        # Undo signaling and cursor updates are now handled by EventHandler
-        super().mouseReleaseEvent(event)
-
-        current_selection = self.textCursor().selection()
-        if current_selection != self.last_selection:
-            self.on_selection_changed()
-        self.last_selection = current_selection
 
     def mouseMoveEvent(self, event):
         # Resize/rotate/move logic is now handled by EventHandler and QGraphicsView
