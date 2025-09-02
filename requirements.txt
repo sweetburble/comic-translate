@@ -2,7 +2,6 @@ opencv_python
 setuptools
 scikit-image>=0.25.2
 PySide6>=6.8.0
-dayu-path>=0.5.2
 msgpack>=1.1.0
 requests>=2.31.0
 pdfplumber>=0.11.5
@@ -11,7 +10,7 @@ torchvision>=0.21.0
 py7zr>=0.20.8
 rarfile>=4.1
 img2pdf>=0.5.1
-python-doctr[torch]>=0.11.0
+python-doctr>=1.0.0
 azure-ai-vision-imageanalysis>=1.0.0b1
 deepl>=1.16.1
 deep-translator>=1.11.4
