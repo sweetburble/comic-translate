@@ -6,21 +6,24 @@ MIT License
 
 import cv2
 import numpy as np
-from skimage import io
 
 
 def load_image(img_file):
-    img = io.imread(img_file)  # RGB order
-    if img.shape[0] == 2:
+    img = cv2.imread(img_file)
+
+    if img is None:
+        raise IOError(f"Could not read image file: {img_file}")
+
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    if img.shape[0] == 2: 
         img = img[0]
-    if len(img.shape) == 2:
+    if len(img.shape) == 2: # This check is now less likely as cv2.imread converts grayscale to 3-channel
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-    if img.shape[2] == 4:
+    if img.shape[2] == 4: # cv2.imread strips the alpha channel by default
         img = img[:, :, :3]
-    img = np.array(img)
-
+    
     return img
-
 
 def normalize_mean_variance(
         in_img,
