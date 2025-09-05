@@ -31,17 +31,38 @@ class RapidOCREngine(OCREngine):
         from rapidocr import RapidOCR, EngineType, LangDet, \
             LangRec, ModelType, OCRVersion
 
-        det_lang = LangDet.CH if lang == 'ch' else LangDet.MULTI
-        rec_lang = LangRec.CH if lang == 'ch' else LangRec.CYRILLIC
+        det_lang = LangDet.CH
 
-        # Build minimal params; RapidOCR will auto-download models.
+        lang_map = {
+            'en': LangRec.LATIN,
+            'fr': LangRec.LATIN,
+            'es': LangRec.LATIN,
+            'it': LangRec.LATIN,
+            'de': LangRec.LATIN,
+            'nl': LangRec.LATIN,
+
+            'ja': LangRec.CH,
+            'ch': LangRec.CH,
+
+            'ru': LangRec.ESLAV,
+            'ko': LangRec.KOREAN,
+
+        }
+
+        rec_lang = lang_map.get(lang.lower(), LangRec.LATIN)
+
         self._params = {
-            'Det.engine_type': EngineType.TORCH,
+            'Det.engine_type': EngineType.ONNXRUNTIME,
             'Det.lang_type': det_lang,
             'Det.model_type': ModelType.MOBILE,
             'Det.ocr_version': OCRVersion.PPOCRV5,
-            'Cls.engine_type': EngineType.TORCH,
-            'Rec.engine_type': EngineType.TORCH,
+            'Det.use_dilation': False,
+
+            'Cls.engine_type': EngineType.ONNXRUNTIME,
+            'Cls.model_type': ModelType.MOBILE,
+            'Cls.ocr_version': OCRVersion.PPOCRV4,
+
+            'Rec.engine_type': EngineType.ONNXRUNTIME,
             'Rec.lang_type': rec_lang,
             "Rec.model_type": ModelType.MOBILE,
             "Rec.ocr_version": OCRVersion.PPOCRV5,
@@ -49,13 +70,10 @@ class RapidOCREngine(OCREngine):
 
         if use_gpu and torch.cuda.is_available():
             self._params.update({
-                "EngineConfig.torch.use_cuda": True,
-                "EngineConfig.torch.gpu_id": 0,
+                "EngineConfig.onnxruntime.use_cuda": True,
             })
 
         self._engine = RapidOCR(params=self._params)
-        self._initialized = True
-        logger.info("RapidOCR initialized with params: %s", self._params)
 
     def process_image(self, img: np.ndarray, blk_list: List[TextBlock]) -> List[TextBlock]:
         """Run OCR on the image and attach text to blocks.
@@ -69,10 +87,8 @@ class RapidOCREngine(OCREngine):
             logger.warning("RapidOCR engine is not initialized; skipping OCR.")
             return blk_list
 
-        # RapidOCR accepts ndarray; it internally converts via PIL.
         result = self._engine(img)
 
-        # Defensive: ensure expected attributes exist
         if result is None or not hasattr(result, 'boxes') or not hasattr(result, 'txts'):
             logger.debug("RapidOCR returned empty or unexpected result: %s", type(result))
             return blk_list
@@ -83,7 +99,7 @@ class RapidOCREngine(OCREngine):
         if boxes is None or txts is None or len(txts) == 0:
             return blk_list
 
-        # Convert quadrilateral to axis-aligned bbox for our pipeline
+        # Convert quadrilateral to axis-aligned bbox
         texts_bboxes = []
         texts_string = []
         
@@ -96,7 +112,7 @@ class RapidOCREngine(OCREngine):
             x2 = int(np.ceil(xs.max()))
             y2 = int(np.ceil(ys.max()))
             texts_bboxes.append((x1, y1, x2, y2))
-            # Some engines may return fewer boxes than txts in rare cases
+            # may return fewer boxes than txts in rare cases
             if i < len(txts):
                 texts_string.append(txts[i])
 
