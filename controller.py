@@ -4,7 +4,6 @@ import shutil
 import tempfile
 from typing import Callable, Tuple
 
-from PySide6 import QtWidgets
 from PySide6 import QtCore
 from PySide6.QtCore import QCoreApplication, QThreadPool
 from PySide6.QtGui import QUndoGroup, QUndoStack
@@ -12,6 +11,7 @@ from PySide6.QtGui import QUndoGroup, QUndoStack
 from app.ui.dayu_widgets.qt import MPixmap
 from app.ui.main_window import ComicTranslateUI
 from app.ui.messages import Messages
+from app.ui.dayu_widgets.message import MMessage
 from app.thread_worker import GenericWorker
 
 from app.ui.canvas.text_item import TextBlockItem
@@ -21,7 +21,7 @@ from modules.utils.textblock import TextBlock
 from modules.utils.file_handler import FileHandler
 from modules.utils.pipeline_utils import validate_settings, validate_ocr, \
                                          validate_translator
-from modules.utils.download import get_models, mandatory_models
+from modules.utils.download import get_models, mandatory_models, set_download_callback
 from modules.detection.utils.general import get_inpaint_bboxes
 from modules.utils.translator_utils import is_there_text
 from modules.rendering.render import pyside_word_wrap
@@ -47,6 +47,7 @@ class ComicTranslate(ComicTranslateUI):
     progress_update = QtCore.Signal(int, int, int, int, bool)
     image_skipped = QtCore.Signal(str, str, str)
     blk_rendered = QtCore.Signal(str, int, object)
+    download_event = QtCore.Signal(str, str)  # status, name
 
     def __init__(self, parent=None):
         super(ComicTranslate, self).__init__(parent)
@@ -92,6 +93,7 @@ class ComicTranslate(ComicTranslateUI):
         self.patches_processed.connect(self.image_ctrl.on_inpaint_patches_processed)
         self.progress_update.connect(self.update_progress)
         self.blk_rendered.connect(self.text_ctrl.on_blk_rendered)
+        self.download_event.connect(self.on_download_event)
 
         self.connect_ui_elements()
         self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
@@ -103,6 +105,14 @@ class ComicTranslate(ComicTranslateUI):
         self.is_processing_queue = False
         self._processing_page_change = False  # Flag to prevent recursive page change handling
 
+        # Hook the global download callback so utils can notify us
+        def _dl_cb(status: str, name: str):
+            # Ensure cross-thread safe emit
+            try:
+                self.download_event.emit(status, name)
+            except Exception:
+                pass
+        set_download_callback(_dl_cb)
 
     def connect_ui_elements(self):
         # Browsers
@@ -719,6 +729,48 @@ class ComicTranslate(ComicTranslateUI):
 
         progress = (task_progress + step_progress) * 100 
         self.progress_bar.setValue(int(progress))
+
+    def on_download_event(self, status: str, name: str):
+        """Show a loading-type MMessage while models/files are being downloaded."""
+        # Keep a counter of active downloads to handle multiple files
+        if not hasattr(self, "_active_downloads"):
+            self._active_downloads = 0
+        if not hasattr(self, "_download_message"):
+            self._download_message = None
+
+        if status == 'start':
+            self._active_downloads += 1
+            # Create a persistent loading message if not already shown
+            if self._download_message is None:
+                try:
+                    # Extract just the filename and use it in the initial message
+                    import os
+                    filename = os.path.basename(name)
+                    # Use a specific message with the filename
+                    self._download_message = MMessage.loading(self.tr(f"Downloading model file: {filename}"), parent=self)
+                except Exception:
+                    # If loading message cannot be shown, do nothing; avoid touching global spinner here
+                    pass
+            else:
+                # Optionally update text with the most recent file name
+                try:
+                    # Extract just the filename from the path/name and format the message
+                    import os
+                    filename = os.path.basename(name)
+                    # Access the internal label to update text
+                    self._download_message._content_label.setText(self.tr(f"Downloading model file: {filename}"))
+                except Exception:
+                    pass
+        elif status == 'end':
+            self._active_downloads = max(0, self._active_downloads - 1)
+            if self._active_downloads == 0:
+                # Close the loading message
+                try:
+                    if self._download_message is not None:
+                        self._download_message.close()
+                finally:
+                    self._download_message = None
+                # Do not change the main window loading spinner here; it's managed by the running task lifecycle
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Left:

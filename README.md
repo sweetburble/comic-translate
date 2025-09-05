@@ -166,16 +166,16 @@ To following selections will require access to closed resources and subsequently
 
 -   Go to OpenAI's Platform website at [platform.openai.com](https://platform.openai.com/) and sign in with (or create) an OpenAI account.
 
-*   Hover your Mouse over the right taskbar of the page and select "API Keys."
-*   Click "Create New Secret Key" to generate a new API key. Copy and store it.
+-   Hover your Mouse over the right taskbar of the page and select "API Keys."
+-   Click "Create New Secret Key" to generate a new API key. Copy and store it.
 
 #### Google Cloud Vision
 
 -   Sign in/Create a [Google Cloud](https://cloud.google.com/) account. Go to [Cloud Resource Manager](https://console.cloud.google.com/cloud-resource-manager) and click "Create Project". Set your project name.
 
-*   [Select your project here](https://console.cloud.google.com/welcome) then select "Billing" then "Create Account". In the pop-up, "Enable billing account", and accept the offer of a free trial account. Your "Account type" should be individual. Fill in a valid credit card.
-*   Enable Google Cloud Vison for your project [here](https://console.cloud.google.com/apis/library/vision.googleapis.com)
-*   In the [Google Cloud Credentials](https://console.cloud.google.com/apis/credentials) page, click "Create Credentials" then API Key. Copy and store it.
+-   [Select your project here](https://console.cloud.google.com/welcome) then select "Billing" then "Create Account". In the pop-up, "Enable billing account", and accept the offer of a free trial account. Your "Account type" should be individual. Fill in a valid credit card.
+-   Enable Google Cloud Vison for your project [here](https://console.cloud.google.com/apis/library/vision.googleapis.com)
+-   In the [Google Cloud Credentials](https://console.cloud.google.com/apis/credentials) page, click "Create Credentials" then API Key. Copy and store it.
 
 ## How it works
 
@@ -192,8 +192,7 @@ By Default:
 -   [doctr](https://github.com/mindee/doctr) for English, French, German, Dutch, Spanish and Italian.
 -   [manga-ocr](https://github.com/kha-white/manga-ocr) for Japanese
 -   [Pororo](https://github.com/yunwoong7/korean_ocr_using_pororo) for Korean
--   [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) for Chinese
--   [GPT-4o](https://platform.openai.com/docs/guides/vision) for Russian. Paid, Requires an API Key.
+-   [RapidOCR](https://github.com/RapidAI/RapidOCR) for Chinese and Russian
 
 Optional:
 
@@ -222,11 +221,11 @@ Wrapped text in bounding boxes obtained from bubbles and text.
 
 ## Acknowledgements
 
--   [https://github.com/ultralytics/ultralytics](https://github.com/ultralytics/ultralytics)
 -   [https://github.com/Sanster/lama-cleaner](https://github.com/Sanster/lama-cleaner)
 -   [https://huggingface.co/dreMaz](https://huggingface.co/dreMaz)
 -   [https://github.com/yunwoong7/korean_ocr_using_pororo](https://github.com/yunwoong7/korean_ocr_using_pororo)
 -   [https://github.com/kha-white/manga-ocr](https://github.com/kha-white/manga-ocr)
 -   [https://github.com/JaidedAI/EasyOCR](https://github.com/JaidedAI/EasyOCR)
 -   [https://github.com/PaddlePaddle/PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
+-   [https://github.com/RapidAI/RapidOCR](https://github.com/RapidAI/RapidOCR)
 -   [https://github.com/phenom-films/dayu_widgets](https://github.com/phenom-films/dayu_widgets)

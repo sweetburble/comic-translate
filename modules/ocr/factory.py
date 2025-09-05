@@ -5,11 +5,12 @@ from .base import OCREngine
 from .microsoft_ocr import MicrosoftOCR
 from .google_ocr import GoogleOCR
 from .gpt_ocr import GPTOCR
-from .paddle_ocr import PaddleOCREngine
+from .rapid_ocr import RapidOCREngine
 from .manga_ocr.engine import MangaOCREngine
 from .pororo.engine import PororoOCREngine
 from .doctr_ocr import DocTROCR
 from .gemini_ocr import GeminiOCR
+from ..utils.device import resolve_device
 
 class OCRFactory:
     """Factory for creating appropriate OCR engines based on settings."""
@@ -114,8 +115,8 @@ class OCRFactory:
             # 'Japanese': cls._create_manga_ocr,
             'Japanese': lambda s: cls._create_paddle_ocr(s, 'japan'),
             'Korean': cls._create_pororo_ocr,
-            'Chinese': lambda s: cls._create_paddle_ocr(s, 'ch'),
-            'Russian': lambda s: cls._create_paddle_ocr(s, 'ru'),
+            'Chinese': lambda s: cls._create_rapid_ocr(s, 'ch'),
+            'Russian': lambda s: cls._create_rapid_ocr(s, 'ru'),
         }
         
         # Check if we have a specific model factory
@@ -156,7 +157,7 @@ class OCRFactory:
     
     @staticmethod
     def _create_manga_ocr(settings) -> OCREngine:
-        device = 'cuda' if settings.is_gpu_enabled() else 'cpu'
+        device = resolve_device(settings.is_gpu_enabled())
         engine = MangaOCREngine()
         engine.initialize(device=device)
         return engine
@@ -168,14 +169,14 @@ class OCRFactory:
         return engine
     
     @staticmethod
-    def _create_paddle_ocr(settings, lang: str) -> OCREngine:
-        engine = PaddleOCREngine()
-        engine.initialize(lang=lang)
+    def _create_rapid_ocr(settings, lang: str) -> OCREngine:
+        engine = RapidOCREngine()
+        engine.initialize(lang=lang, use_gpu=settings.is_gpu_enabled())
         return engine
     
     @staticmethod
     def _create_doctr_ocr(settings) -> OCREngine:
-        device = 'cuda' if settings.is_gpu_enabled() else 'cpu'
+        device = resolve_device(settings.is_gpu_enabled())
         engine = DocTROCR()
         engine.initialize(device=device)
         return engine
