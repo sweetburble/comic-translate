@@ -1,5 +1,4 @@
 import os, shutil
-from typing import List
 from dataclasses import asdict, is_dataclass
 
 from PySide6 import QtWidgets, QtGui
@@ -16,6 +15,10 @@ OCR_MIGRATIONS = {
 TRANSLATOR_MIGRATIONS = {
     "GPT-4o": "GPT-4.1",
     "GPT-4o mini": "GPT-4.1-mini",
+}
+
+INPAINTER_MIGRATIONS = {
+    "MI-GAN": "AOT",
 }
 
 class SettingsPage(QtWidgets.QWidget):
@@ -158,7 +161,7 @@ class SettingsPage(QtWidgets.QWidget):
             'save_keys': self.ui.save_keys_checkbox.isChecked(),
         }
 
-    def import_font(self, file_paths: List[str]):
+    def import_font(self, file_paths: list[str]):
 
         file_paths = [f for f in file_paths 
                       if f.endswith((".ttf", ".ttc", ".otf", ".woff", ".woff2"))]
@@ -277,7 +280,8 @@ class SettingsPage(QtWidgets.QWidget):
         translated_ocr = self.ui.reverse_mappings.get(ocr, ocr)
         self.ui.ocr_combo.setCurrentText(translated_ocr)
 
-        inpainter = settings.value('inpainter', 'LaMa')
+        raw_inpainter = settings.value('inpainter', 'LaMa')
+        inpainter = INPAINTER_MIGRATIONS.get(raw_inpainter, raw_inpainter)
         translated_inpainter = self.ui.reverse_mappings.get(inpainter, inpainter)
         self.ui.inpainter_combo.setCurrentText(translated_inpainter)
 
@@ -337,17 +341,17 @@ class SettingsPage(QtWidgets.QWidget):
                     self.ui.credential_widgets["Microsoft Azure_region"].setText(settings.value(f"{translated_service}_region_translator", ''))
                     self.ui.credential_widgets["Microsoft Azure_endpoint"].setText(settings.value(f"{translated_service}_endpoint", ''))
                 elif translated_service == "Custom":
-                    self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
-                    self.ui.credential_widgets[f"{service}_api_url"].setText(settings.value(f"{translated_service}_api_url", ''))
-                    self.ui.credential_widgets[f"{service}_model"].setText(settings.value(f"{translated_service}_model", ''))
+                    self.ui.credential_widgets[f"{translated_service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
+                    self.ui.credential_widgets[f"{translated_service}_api_url"].setText(settings.value(f"{translated_service}_api_url", ''))
+                    self.ui.credential_widgets[f"{translated_service}_model"].setText(settings.value(f"{translated_service}_model", ''))
                 elif translated_service == "Cerebras":
-                    self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
-                    self.ui.credential_widgets[f"{service}_model"].setText(settings.value(f"{translated_service}_model", ''))
+                    self.ui.credential_widgets[f"{translated_service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
+                    self.ui.credential_widgets[f"{translated_service}_model"].setText(settings.value(f"{translated_service}_model", ''))
                 elif translated_service == "Yandex":
-                    self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
-                    self.ui.credential_widgets[f"{service}_folder_id"].setText(settings.value(f"{translated_service}_folder_id", ''))
+                    self.ui.credential_widgets[f"{translated_service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
+                    self.ui.credential_widgets[f"{translated_service}_folder_id"].setText(settings.value(f"{translated_service}_folder_id", ''))
                 else:
-                    self.ui.credential_widgets[f"{service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
+                    self.ui.credential_widgets[f"{translated_service}_api_key"].setText(settings.value(f"{translated_service}_api_key", ''))
         settings.endGroup()
 
         self._loading_settings = False
