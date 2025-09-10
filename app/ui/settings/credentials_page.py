@@ -122,6 +122,26 @@ class CredentialsPage(QtWidgets.QWidget):
                 folder_id_input.set_prefix_widget(folder_id_prefix)
                 service_layout.addWidget(folder_id_input)
                 self.credential_widgets[f"{normalized}_folder_id"] = folder_id_input
+            
+            elif normalized == "Cerebras":
+                api_key_input = MLineEdit()
+                api_key_input.setEchoMode(QtWidgets.QLineEdit.Password)
+                api_key_input.setFixedWidth(400)
+                api_key_prefix = MLabel(self.tr("API Key")).border()
+                set_label_width(api_key_prefix)
+                api_key_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                api_key_input.set_prefix_widget(api_key_prefix)
+                service_layout.addWidget(api_key_input)
+                self.credential_widgets[f"{normalized}_api_key"] = api_key_input
+
+                model_input = MLineEdit()
+                model_input.setFixedWidth(400)
+                model_prefix = MLabel(self.tr("Model")).border()
+                set_label_width(model_prefix)
+                model_prefix.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+                model_input.set_prefix_widget(model_prefix)
+                service_layout.addWidget(model_input)
+                self.credential_widgets[f"{normalized}_model"] = model_input
 
             else:
                 api_key_input = MLineEdit()

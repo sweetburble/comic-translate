@@ -658,6 +658,14 @@ Go to Settings &gt; Text Rendering &gt; Font to select or import one </source>
         <translation>Yandex</translation>
     </message>
     <message>
+        <location filename="../ui/settings/settings_ui.py" line="37"/>
+        <location filename="../ui/settings/settings_ui.py" line="42"/>
+        <location filename="../ui/settings/settings_ui.py" line="82"/>
+        <location filename="../ui/settings/settings_ui.py" line="120"/>
+        <source>Cerebras</source>
+        <translation>Cerebras</translation>
+    </message>
+    <message>
         <location filename="../ui/settings/settings_ui.py" line="41"/>
         <location filename="../ui/settings/settings_ui.py" line="74"/>
         <source>GPT-4o</source>
