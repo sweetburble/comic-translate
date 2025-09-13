@@ -6,7 +6,7 @@ from .base import OCREngine
 from .microsoft_ocr import MicrosoftOCR
 from .google_ocr import GoogleOCR
 from .gpt_ocr import GPTOCR
-from .rapid_ocr import RapidOCREngine
+from .ppocr import PPOCRv5Engine
 from .manga_ocr.onnx_engine import MangaOCREngineONNX
 from .pororo.onnx_engine import PororoOCREngineONNX  
 from .gemini_ocr import GeminiOCR
@@ -115,14 +115,14 @@ class OCRFactory:
             # 'Japanese': lambda s: cls._create_paddle_ocr(s, 'japan'),
             'Japanese': lambda s: cls._create_rapid_ocr(s, 'ja'),
             'Korean': cls._create_pororo_ocr,
-            'Chinese': lambda s: cls._create_rapid_ocr(s, 'ch'),
-            'Russian': lambda s: cls._create_rapid_ocr(s, 'ru'),
-            'French': lambda s: cls._create_rapid_ocr(s, 'fr'),
-            'English': lambda s: cls._create_rapid_ocr(s, 'en'),
-            'Spanish': lambda s: cls._create_rapid_ocr(s, 'es'),
-            'Italian': lambda s: cls._create_rapid_ocr(s, 'it'),
-            'German': lambda s: cls._create_rapid_ocr(s, 'de'),
-            'Dutch': lambda s: cls._create_rapid_ocr(s, 'nl'),
+            'Chinese': lambda s: cls._create_ppocr(s, 'ch'),
+            'Russian': lambda s: cls._create_ppocr(s, 'ru'),
+            'French': lambda s: cls._create_ppocr(s, 'latin'),
+            'English': lambda s: cls._create_ppocr(s, 'en'),
+            'Spanish': lambda s: cls._create_ppocr(s, 'latin'),
+            'Italian': lambda s: cls._create_ppocr(s, 'latin'),
+            'German': lambda s: cls._create_ppocr(s, 'latin'),
+            'Dutch': lambda s: cls._create_ppocr(s, 'latin'),
         }
         
         # Check if we have a specific model factory
@@ -175,11 +175,10 @@ class OCRFactory:
         return engine
     
     @staticmethod
-    def _create_rapid_ocr(settings, lang: str) -> OCREngine:
+    def _create_ppocr(settings, lang: str) -> OCREngine:
         device = resolve_device(settings.is_gpu_enabled())
-        use_gpu = device != 'cpu'
-        engine = RapidOCREngine()
-        engine.initialize(lang=lang, use_gpu=use_gpu)
+        engine = PPOCRv5Engine()
+        engine.initialize(lang=lang, device=device)
         return engine
     
     @staticmethod
