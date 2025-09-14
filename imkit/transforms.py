@@ -4,18 +4,18 @@ from __future__ import annotations
 import numpy as np
 import mahotas as mh
 from PIL import Image, ImageDraw, ImageFilter
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 from .utils import ensure_uint8_rgb
 
 
 def to_gray(img: np.ndarray) -> np.ndarray:
-    """Ensure image is grayscale uint8 for mahotas."""
+    """Grayscale conversion using Pillow."""
     if img.ndim == 3:
-        # Mahotas expects uint8 for rgb2gray
         if img.dtype != np.uint8:
             img = img.astype(np.uint8)
-        # Convert to grayscale AND ensure the output is uint8
-        return mh.colors.rgb2gray(img, dtype=np.uint8)
+        pil_img = Image.fromarray(img)
+        gray = pil_img.convert("L")  # Pillow grayscale
+        return np.array(gray, dtype=np.uint8)
     elif img.dtype != np.uint8:
         return img.astype(np.uint8)
     return img.copy()
@@ -23,13 +23,8 @@ def to_gray(img: np.ndarray) -> np.ndarray:
 
 def gaussian_blur(array: np.ndarray, radius: float = 1.0) -> np.ndarray:
     """Apply Gaussian blur to an image array."""
-    from .utils import ensure_uint8_rgb
     im = Image.fromarray(ensure_uint8_rgb(array))
     return np.array(im.filter(ImageFilter.GaussianBlur(radius=radius)))
-
-# def gaussian_blur(array: np.ndarray, sigma: float = 0) -> np.ndarray:
-#     """Apply Gaussian blur to an image array."""
-#     return mh.gaussian_filter(array, sigma=sigma)
 
 
 def resize(
@@ -38,7 +33,6 @@ def resize(
     mode: Image.Resampling = Image.Resampling.LANCZOS
 ) -> np.ndarray:
     """Resize an image array to the specified size."""
-    from .utils import ensure_uint8_rgb
     w, h = size
     im = Image.fromarray(ensure_uint8_rgb(image))
     im = im.resize((w, h), resample=mode)
@@ -252,66 +246,34 @@ def box_points(rect: tuple) -> np.ndarray:
     return box.astype(np.float32)
 
 
-# def fill_poly(
-#     img_np: np.ndarray, 
-#     pts: Sequence[np.ndarray], 
-#     color: Union[int, tuple]
-# ) -> np.ndarray:
-#     """
-#     A PIL-based replacement for cv2.fillPoly.
-
-#     Args:
-#         img_np (np.ndarray): The input image as a NumPy array.
-#         pts (Sequence[np.ndarray]): A list/sequence of polygons to fill. Each polygon
-#                                     is a NumPy array of shape (num_points, 2).
-#         color (Union[int, tuple]): The fill color. An integer for grayscale images,
-#                                    or a tuple like (R, G, B) for color.
-
-#     Returns:
-#         np.ndarray: The image with the polygons filled, as a NumPy array.
-#     """
-#     pil_img = Image.fromarray(img_np)
-#     draw = ImageDraw.Draw(pil_img)
-    
-#     for poly in pts:
-#         points_list = [tuple(p) for p in poly]
-#         draw.polygon(points_list, fill=color)
-
-#     return np.array(pil_img)
-
-
 def fill_poly(
-    image: np.ndarray,
-    pts: Sequence[np.ndarray],
-    color: int = 1
+    img_np: np.ndarray, 
+    pts: Sequence[np.ndarray], 
+    color: Union[int, tuple]
 ) -> np.ndarray:
     """
-    Fills a polygon on an image using mahotas, after converting the polygon
-    from the cv2 format.
+    A PIL-based replacement for cv2.fillPoly.
 
     Args:
-        image (np.ndarray): The canvas (image) on which to draw. This is
-                            modified in-place by mahotas.
-        polygon (Sequence[np.ndarray]): A list/sequence of polygons to fill.
-                               Each polygon is a NumPy array representing the polygon in
-                               the cv2 format (N, 1, 2) and integer dtype.
-        color (int, optional): The color value to fill the polygon with.
-                               Defaults to 1.
+        img_np (np.ndarray): The input image as a NumPy array.
+        pts (Sequence[np.ndarray]): A list/sequence of polygons to fill. Each polygon
+                                    is a NumPy array of shape (num_points, 2).
+        color (Union[int, tuple]): The fill color. An integer for grayscale images,
+                                   or a tuple like (R, G, B) for color.
+
+    Returns:
+        np.ndarray: The image with the polygons filled, as a NumPy array.
     """
+    pil_img = Image.fromarray(img_np)
+    draw = ImageDraw.Draw(pil_img)
     
-    for polygon in pts:
-        # Reshape the polygon from (N, 1, 2) to (N, 2)
-        # This removes the extra dimension.
-        reshaped_poly = polygon.reshape(-1, 2)
+    for poly in pts:
+        # Convert the (N, 1, 2) or (N, 2) numpy array to a list of (x, y) tuples
+        points_list = tuple(map(tuple, poly.reshape(-1, 2)))
+        if len(points_list) > 1: # A polygon needs at least 2 points to be a line
+            draw.polygon(points_list, fill=color)
 
-        # Swap x and y coordinates to convert from (x, y) to (y, x)
-        mahotas_poly = reshaped_poly[:, ::-1]
-
-        # mahotas.polygon.fill_polygon expects a list of (y,x) tuples
-        mahotas_poly_list = list(map(tuple, mahotas_poly))
-        mh.polygon.fill_polygon(mahotas_poly_list, image, color=color)
-
-    return image
+    return np.array(pil_img)
 
 
 def connected_components(image: np.ndarray, connectivity: int = 4) -> tuple:
@@ -563,3 +525,44 @@ def rectangle(
         draw.rectangle([pt1, pt2], outline=pil_color, width=thickness)
 
     return np.array(img_pil)
+
+
+def add_weighted(
+    src1: np.ndarray, 
+    alpha: float, 
+    src2: np.ndarray, 
+    beta: float, 
+    gamma: float
+) -> np.ndarray:
+    """
+    Implements cv2.addWeighted() using NumPy.
+
+    Args:
+        src1 (np.ndarray): First input array.
+        alpha (float): Weight for the first array elements.
+        src2 (np.ndarray): Second input array.
+        beta (float): Weight for the second array elements.
+        gamma (float): Scalar added to the weighted sum.
+
+    Returns:
+        np.ndarray: The weighted sum of the two arrays, with the same data type
+                    as the input arrays, and values clipped to the valid range.
+    """
+    # Ensure src1 and src2 have the same dimensions and data type.
+    if src1.shape != src2.shape:
+        raise ValueError("Input arrays must have the same shape.")
+
+    # Perform the weighted sum using NumPy.
+    # Arithmetic operations will be performed on floats to prevent overflow
+    # before the final saturation.
+    weighted_sum = (alpha * src1.astype(np.float64) +
+                    beta * src2.astype(np.float64) +
+                    gamma)
+
+    # Re-cast to the original data type and clip values to handle saturation.
+    # This prevents the modulo arithmetic behavior of standard NumPy integer operations.
+    output = np.clip(weighted_sum,
+                     np.iinfo(src1.dtype).min,
+                     np.iinfo(src1.dtype).max)
+
+    return output.astype(src1.dtype)
