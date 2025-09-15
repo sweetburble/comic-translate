@@ -1,5 +1,4 @@
 import numpy as np
-import math
 from typing import List, Dict
 
 from PySide6 import QtWidgets, QtCore, QtGui
@@ -48,8 +47,22 @@ class DrawingManager:
             self.current_path_item.setZValue(0.8)  
         
         elif self.viewer.current_tool == 'eraser':
-            self.before_erase_state = [pcb.save_path_properties(item) for item in
-                                       self._scene.items() if isinstance(item, QGraphicsPathItem)]
+            # Capture the current state before starting erase operation
+            self.before_erase_state = []
+            try:
+                photo_item = getattr(self.viewer, 'photo', None)
+                for item in self._scene.items():
+                    if (isinstance(item, QGraphicsPathItem) and 
+                        item != photo_item and
+                        hasattr(item, 'path')):  # Ensure item has path method
+                        props = pcb.save_path_properties(item)
+                        if props:  # Only add valid properties
+                            self.before_erase_state.append(props)
+            except Exception as e:
+                print(f"Warning: Error capturing before_erase_state: {e}")
+                import traceback
+                traceback.print_exc()
+                self.before_erase_state = []
 
     def continue_stroke(self, scene_pos: QPointF):
         """Continues an existing drawing or erasing stroke."""
@@ -70,12 +83,34 @@ class DrawingManager:
                 self.viewer.command_emitted.emit(command)
 
         if self.viewer.current_tool == 'eraser':
-            self.after_erase_state = [pcb.save_path_properties(item) for item in
-                                      self._scene.items() if isinstance(item, QGraphicsPathItem)]
-            command = EraseUndoCommand(self.viewer, self.before_erase_state, self.after_erase_state)
-            self.viewer.command_emitted.emit(command)
-            self.before_erase_state.clear()
-            self.after_erase_state.clear()
+            # Capture the current state after erase operation
+            self.after_erase_state = []
+            try:
+                photo_item = getattr(self.viewer, 'photo', None)
+                for item in self._scene.items():
+                    if (isinstance(item, QGraphicsPathItem) and 
+                        item != photo_item and
+                        hasattr(item, 'path')):  # Ensure item has path method
+                        props = pcb.save_path_properties(item)
+                        if props:  # Only add valid properties
+                            self.after_erase_state.append(props)
+            except Exception as e:
+                print(f"Warning: Error capturing after_erase_state: {e}")
+                import traceback
+                traceback.print_exc()
+                self.after_erase_state = []
+            
+            # Only create undo command if we have valid before/after states
+            if hasattr(self, 'before_erase_state'):
+                # Create copies of the lists before passing them to avoid clearing issues
+                before_copy = list(self.before_erase_state)
+                after_copy = list(self.after_erase_state)
+                command = EraseUndoCommand(self.viewer, before_copy, after_copy)
+                self.viewer.command_emitted.emit(command)
+                self.before_erase_state.clear()
+                self.after_erase_state.clear()
+            else:
+                print("Warning: No before_erase_state found, skipping undo command creation")
         
         self.current_path = None
         self.current_path_item = None
@@ -94,19 +129,22 @@ class DrawingManager:
         new_path = QPainterPath()
         
         brush_color = QColor(item.brush().color().name(QColor.HexArgb))
-        if brush_color == "#80ff0000":  # Generated stroke
-            precise_erase_path = QPainterPath()
-            for i in range(36):
-                angle = i * 10 * math.pi / 180
-                point = QPointF(pos.x() + self.eraser_size * math.cos(angle),
-                                pos.y() + self.eraser_size * math.sin(angle))
-                if i == 0: precise_erase_path.moveTo(point)
-                else: precise_erase_path.lineTo(point)
-            precise_erase_path.closeSubpath()
+        if brush_color == "#80ff0000":  # Generated (filled) segmentation path
+            # Map erase shape into item's local coordinates to ensure robust boolean ops
+            try:
+                local_erase_path = item.mapFromScene(erase_path)
+            except Exception:
+                # Fallback: translate by item position if mapping isn't available
+                local_erase_path = QPainterPath(erase_path)
+                local_erase_path.translate(-item.pos().x(), -item.pos().y())
 
-            intersected_path = path.intersected(precise_erase_path)
-            if not intersected_path.isEmpty():
-                new_path = path.subtracted(intersected_path)
+            # Ensure consistent fill rule for robust subtraction of filled polygons
+            path.setFillRule(Qt.FillRule.WindingFill)
+            local_erase_path.setFillRule(Qt.FillRule.WindingFill)
+
+            result = path.subtracted(local_erase_path)
+            if not result.isEmpty():
+                new_path = result
         else: # Human-drawn stroke
             element_count = path.elementCount()
             i = 0
@@ -347,6 +385,8 @@ class DrawingManager:
 
         # 6) Build a single QPainterPath merging all contours
         path = QtGui.QPainterPath()
+        # Use winding fill rule so boolean ops (subtract/intersect) behave predictably
+        path.setFillRule(Qt.FillRule.WindingFill)
         for cnt in contours:
             pts = cnt.squeeze(1)
             if pts.ndim != 2 or pts.shape[0] < 3:

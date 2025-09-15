@@ -5,7 +5,7 @@ import numpy as np
 import mahotas as mh
 from PIL import Image, ImageDraw, ImageFilter
 from typing import Optional, Sequence, Union
-from .utils import ensure_uint8_rgb
+from .utils import ensure_uint8
 
 
 def to_gray(img: np.ndarray) -> np.ndarray:
@@ -23,7 +23,7 @@ def to_gray(img: np.ndarray) -> np.ndarray:
 
 def gaussian_blur(array: np.ndarray, radius: float = 1.0) -> np.ndarray:
     """Apply Gaussian blur to an image array."""
-    im = Image.fromarray(ensure_uint8_rgb(array))
+    im = Image.fromarray(ensure_uint8(array))
     return np.array(im.filter(ImageFilter.GaussianBlur(radius=radius)))
 
 
@@ -34,7 +34,7 @@ def resize(
 ) -> np.ndarray:
     """Resize an image array to the specified size."""
     w, h = size
-    im = Image.fromarray(ensure_uint8_rgb(image))
+    im = Image.fromarray(ensure_uint8(image))
     im = im.resize((w, h), resample=mode)
     return np.array(im)
 
@@ -68,7 +68,7 @@ def merge_channels(channels: list) -> np.ndarray:
     return np.stack(channels, axis=-1)
 
 
-def _monotone_chain(points):
+def _monotone_chain(points: np.ndarray) -> np.ndarray:
     """Andrew's monotone chain convex hull. 
     Input Nx2 array, returns hull vertices CCW (no duplicate last point).
     """
@@ -247,33 +247,52 @@ def box_points(rect: tuple) -> np.ndarray:
 
 
 def fill_poly(
-    img_np: np.ndarray, 
-    pts: Sequence[np.ndarray], 
-    color: Union[int, tuple]
+    image: np.ndarray,
+    pts: Union[Sequence[np.ndarray], np.ndarray],
+    color: int = 1
 ) -> np.ndarray:
     """
-    A PIL-based replacement for cv2.fillPoly.
+    Fills a polygon on an image using mahotas, after converting the polygon
+    from the cv2 format.
 
     Args:
-        img_np (np.ndarray): The input image as a NumPy array.
-        pts (Sequence[np.ndarray]): A list/sequence of polygons to fill. Each polygon
-                                    is a NumPy array of shape (num_points, 2).
-        color (Union[int, tuple]): The fill color. An integer for grayscale images,
-                                   or a tuple like (R, G, B) for color.
-
-    Returns:
-        np.ndarray: The image with the polygons filled, as a NumPy array.
+        image (np.ndarray): The canvas (image) on which to draw. This is
+                            modified in-place by mahotas.
+        pts (Union[Sequence[np.ndarray], np.ndarray]): Either:
+                               - A list/sequence of polygons to fill (each polygon as NumPy array)
+                               - A single polygon as NumPy array
+                               Each polygon can be in either (N, 2) or (N, 1, 2) format with integer dtype.
+                               Both formats are supported, similar to cv2.fillPoly.
+        color (int, optional): The color value to fill the polygon with.
+                               Defaults to 1.
     """
-    pil_img = Image.fromarray(img_np)
-    draw = ImageDraw.Draw(pil_img)
     
-    for poly in pts:
-        # Convert the (N, 1, 2) or (N, 2) numpy array to a list of (x, y) tuples
-        points_list = tuple(map(tuple, poly.reshape(-1, 2)))
-        if len(points_list) > 1: # A polygon needs at least 2 points to be a line
-            draw.polygon(points_list, fill=color)
+    # Handle single array input (convert to list for uniform processing)
+    if isinstance(pts, np.ndarray):
+        polygons = [pts]
+    else:
+        polygons = pts
+    
+    for polygon in polygons:
+        # Handle both (N, 2) and (N, 1, 2) formats
+        if polygon.ndim == 2 and polygon.shape[1] == 2:
+            # Already in (N, 2) format
+            reshaped_poly = polygon
+        elif polygon.ndim == 3 and polygon.shape[1] == 1 and polygon.shape[2] == 2:
+            # In (N, 1, 2) format, reshape to (N, 2)
+            reshaped_poly = polygon.reshape(-1, 2)
+        else:
+            # Try a generic reshape that handles both cases
+            reshaped_poly = polygon.reshape(-1, 2)
 
-    return np.array(pil_img)
+        # Swap x and y coordinates to convert from (x, y) to (y, x)
+        mahotas_poly = reshaped_poly[:, ::-1]
+
+        # mahotas.polygon.fill_polygon expects a list of (y,x) tuples
+        mahotas_poly_list = list(map(tuple, mahotas_poly))
+        mh.polygon.fill_polygon(mahotas_poly_list, image, color=color)
+
+    return image
 
 
 def connected_components(image: np.ndarray, connectivity: int = 4) -> tuple:
@@ -371,7 +390,13 @@ def connected_components_with_stats(image: np.ndarray, connectivity: int = 4) ->
     return num_labels, labeled, stats, centroids
 
 
-def line(image: np.ndarray, pt1: tuple, pt2: tuple, color: int, thickness: int = 1) -> np.ndarray:
+def line(
+    image: np.ndarray, 
+    pt1: tuple, 
+    pt2: tuple, 
+    color: int, 
+    thickness: int = 1
+) -> np.ndarray:
     """
     Draw a line on an image using PIL.
     Replaces cv2.line functionality.
@@ -387,14 +412,18 @@ def line(image: np.ndarray, pt1: tuple, pt2: tuple, color: int, thickness: int =
         Image with line drawn
     """
     
-    pil_image = Image.fromarray(ensure_uint8_rgb(image))
+    pil_image = Image.fromarray(ensure_uint8(image))
     draw = ImageDraw.Draw(pil_image)
     draw.line([pt1, pt2], fill=color, width=thickness)
 
     return np.array(pil_image)
 
 
-def convert_scale_abs(array: np.ndarray, alpha: float = 1.0, beta: float = 0.0) -> np.ndarray:
+def convert_scale_abs(
+    array: np.ndarray, 
+    alpha: float = 1.0, 
+    beta: float = 0.0
+) -> np.ndarray:
     """
     Convert array to absolute values with scaling.
     Replaces cv2.convertScaleAbs functionality.
@@ -417,7 +446,12 @@ def convert_scale_abs(array: np.ndarray, alpha: float = 1.0, beta: float = 0.0) 
     return clipped.astype(np.uint8)
 
 
-def threshold(array: np.ndarray, thresh: float, maxval: float = 255, thresh_type: int = 0) -> tuple[float, np.ndarray]:
+def threshold(
+    array: np.ndarray, 
+    thresh: float, 
+    maxval: float = 255, 
+    thresh_type: int = 0
+) -> tuple[float, np.ndarray]:
     """
     Apply threshold to an array.
     Replaces cv2.threshold functionality.
@@ -483,7 +517,7 @@ def rectangle(
         np.ndarray: The modified image as a numpy array.
     """
     # Create an ImageDraw object
-    img_pil = Image.fromarray(ensure_uint8_rgb(image))
+    img_pil = Image.fromarray(ensure_uint8(image))
     draw = ImageDraw.Draw(img_pil)
     
     # Normalize color to what PIL expects depending on image mode.
