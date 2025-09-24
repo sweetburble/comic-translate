@@ -19,7 +19,7 @@ MODEL_MAP = {
     "Gemini-2.5-Flash-Lite": "gemini-2.5-flash-lite-preview-06-17",
     "Gemini-2.5-Flash": "gemini-2.5-flash",
     "Gemini-2.5-Pro": "gemini-2.5-pro",
-    "Grok-3-Mini": "grok-3-mini-latest"
+    "Grok-4-fast-non-reasoning": "grok-4-fast-non-reasoning"
 }
 
 def encode_image_array(img_array: np.ndarray):

@@ -111,9 +111,9 @@ class OCRFactory:
         
         # Language-specific factory functions (for Default model)
         language_factories = {
-            # 'Japanese': cls._create_manga_ocr,
-            # 'Japanese': lambda s: cls._create_paddle_ocr(s, 'japan'),
-            'Japanese': lambda s: cls._create_rapid_ocr(s, 'ja'),
+            'Japanese': cls._create_manga_ocr,
+            # 'Japanese': lambda s: cls._create_rapid_ocr(s, 'ja'),
+            # 'Japanese': lambda s: cls._create_ppocr(s, 'japan'), # 현재는 미지원... https://modelscope.cn/models/RapidAI/RapidOCR/files?version=v3.4.0 에서 확인하기
             'Korean': cls._create_pororo_ocr,
             'Chinese': lambda s: cls._create_ppocr(s, 'ch'),
             'Russian': lambda s: cls._create_ppocr(s, 'ru'),
