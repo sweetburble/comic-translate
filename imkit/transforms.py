@@ -125,7 +125,7 @@ def min_area_rect(points, assume_hull=False):
     if m == 1:
         x, y = hull[0]
         rect = ((x, y), (0.0, 0.0), 0.0)
-        return rect, np.array([[x, y]] * 4, dtype=np.float32)
+        return rect
     if m == 2:
         (x0, y0), (x1, y1) = hull
         dx, dy = x1 - x0, y1 - y0
@@ -163,7 +163,7 @@ def min_area_rect(points, assume_hull=False):
     if edges.shape[0] == 0:
         x, y = hull[0]
         rect = ((x, y), (0.0, 0.0), 0.0)
-        return rect, np.array([[x, y]] * 4, dtype=np.float32)
+        return rect
 
     # Unit vectors for candidate x-axes (ux) and corresponding y-axes (uy)
     ux = edges / edge_len[:, None]
@@ -338,7 +338,7 @@ def connected_components(image: np.ndarray, connectivity: int = 4) -> tuple:
     # mh.label returns the labeled image and the number of objects (excluding background)
     labeled, num_labels = mh.label(image > 0, Bc=Bc)
 
-    return num_labels, labeled
+    return num_labels+1, labeled
 
 
 def connected_components_with_stats(image: np.ndarray, connectivity: int = 4) -> tuple:
@@ -367,7 +367,7 @@ def connected_components_with_stats(image: np.ndarray, connectivity: int = 4) ->
         # Background only
         stats = np.array([[0, 0, image.shape[1], image.shape[0], image.size]], dtype=np.int32)
         centroids = np.array([[ (image.shape[1]-1)/2.0, (image.shape[0]-1)/2.0 ]], dtype=np.float64)
-        return 0, labeled, stats, centroids
+        return 1, labeled, stats, centroids
 
     # 3. Calculate statistics for all labels at once (including background label 0)
     # The output of these functions is an array where the index corresponds to the label.
@@ -408,8 +408,8 @@ def connected_components_with_stats(image: np.ndarray, connectivity: int = 4) ->
     height[sizes == 0] = 0
     
     stats = np.stack([xmin, ymin, width, height, sizes], axis=1).astype(np.int32)
-    
-    return num_labels, labeled, stats, centroids
+
+    return num_labels+1, labeled, stats, centroids
 
 
 def line(
