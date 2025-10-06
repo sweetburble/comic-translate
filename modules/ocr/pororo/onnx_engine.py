@@ -24,15 +24,11 @@ from .pororo.models.brainOCR.utils import get_image_list
 from .pororo.models.brainOCR.utils import reformat_input, get_paragraph, diff
 
 
-class PororoOCREngineONNX(OCREngine):  # type: ignore
+class PororoOCREngineONNX(OCREngine):
     """Runs Pororo OCR fully with ONNXRuntime."""
 
     def __init__(self):
-        self.project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
-        model_dir = os.path.join(self.project_root, "models", "ocr", "pororo")
-        opt_file = os.path.join(model_dir, "ocr-opt.txt")
-
-        # Parse config to get recognition params & vocab
+        opt_file = ModelDownloader.get_file_path(ModelID.PORORO_ONNX, "ocr-opt.txt")
         self.opt2val = Reader.parse_options(opt_file)
         self.opt2val["vocab"] = Reader.build_vocab(self.opt2val["character"])  # type: ignore
         self.opt2val["vocab_size"] = len(self.opt2val["vocab"])
