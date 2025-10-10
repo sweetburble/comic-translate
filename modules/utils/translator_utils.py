@@ -14,7 +14,7 @@ MODEL_MAP = {
     "Deepseek-v3": "deepseek-chat", 
     "GPT-4.1": "gpt-4.1",
     "GPT-4.1-mini": "gpt-4.1-mini",
-    "Claude-4-Sonnet": "claude-sonnet-4-20250514",
+    "Claude-4.5-Sonnet": "claude-sonnet-4-5-20250929",
     "Claude-3.5-Haiku": "claude-3-5-haiku-20241022",
     "Gemini-Flash-Lite-Latest": "gemini-flash-lite-latest",
     "Gemini-Flash-Latest": "gemini-flash-latest",

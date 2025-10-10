@@ -65,7 +65,7 @@ class SettingsPageUI(QtWidgets.QWidget):
                                     self.tr("Google Gemini"), self.tr("DeepL"), self.tr("Anthropic Claude"), self.tr("Yandex"), self.tr("Grok"), self.tr("Cerebras")]
         
         self.supported_translators = [self.tr("GPT-4.1"), self.tr("GPT-4.1-mini"), self.tr("DeepL"), 
-                                    self.tr("Claude-4-Sonnet"), self.tr("Claude-3.5-Haiku"), self.tr("Gemini-Flash-Lite-Latest"),
+                                    self.tr("Claude-4.5-Sonnet"), self.tr("Claude-3.5-Haiku"), self.tr("Gemini-Flash-Lite-Latest"),
                                     self.tr("Gemini-Flash-Latest"), self.tr("Gemini-2.5-Pro"), self.tr("Yandex"), self.tr("Google Translate"),
                                     self.tr("Microsoft Translator"), self.tr("Deepseek-v3"), self.tr("Grok-4-fast-non-reasoning"), self.tr("Custom"), self.tr("Cerebras")]
         
@@ -101,7 +101,7 @@ class SettingsPageUI(QtWidgets.QWidget):
             self.tr("GPT-4.1"): "GPT-4.1",
             self.tr("GPT-4.1-mini"): "GPT-4.1-mini",
             self.tr("DeepL"): "DeepL",
-            self.tr("Claude-4-Sonnet"): "Claude-4-Sonnet",
+            self.tr("Claude-4.5-Sonnet"): "Claude-4.5-Sonnet",
             self.tr("Claude-3.5-Haiku"): "Claude-3.5-Haiku",
             self.tr("Gemini-Flash-Lite-Latest"): "Gemini-Flash-Lite-Latest",
             self.tr("Gemini-Flash-Latest"): "Gemini-Flash-Latest",
@@ -224,7 +224,6 @@ class SettingsPageUI(QtWidgets.QWidget):
         self.raw_text_checkbox = self.export_page.raw_text_checkbox
         self.translated_text_checkbox = self.export_page.translated_text_checkbox
         self.inpainted_image_checkbox = self.export_page.inpainted_image_checkbox
-        self.jpeg_quality_spinbox = self.export_page.jpeg_quality_spinbox
         self.export_widgets = self.export_page.export_widgets
         self.from_file_types = self.export_page.from_file_types
 
