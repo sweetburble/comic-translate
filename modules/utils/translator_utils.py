@@ -15,7 +15,7 @@ MODEL_MAP = {
     "GPT-4.1": "gpt-4.1",
     "GPT-4.1-mini": "gpt-4.1-mini",
     "Claude-4.5-Sonnet": "claude-sonnet-4-5-20250929",
-    "Claude-3.5-Haiku": "claude-3-5-haiku-20241022",
+    "Claude-3.5-Haiku": "claude-haiku-4-5-20251001",
     "Gemini-Flash-Lite-Latest": "gemini-flash-lite-latest",
     "Gemini-Flash-Latest": "gemini-flash-latest",
     "Gemini-2.5-Pro": "gemini-2.5-pro",
