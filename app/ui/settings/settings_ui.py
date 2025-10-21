@@ -56,7 +56,7 @@ class SettingsPageUI(QtWidgets.QWidget):
 
         self.inpainters = ['LaMa', 'AOT']
         self.detectors = ['RT-DETR-v2']
-        self.ocr_engines = [self.tr("Default"), self.tr('Microsoft OCR'), self.tr('Google Cloud Vision'), self.tr('Gemini-Flash-Latest'), self.tr('GPT-4.1-mini')]
+        self.ocr_engines = [self.tr("Default"), self.tr('Microsoft OCR'), self.tr('Google Cloud Vision'), self.tr('Gemini-Flash-Latest'), self.tr('GPT-5-mini')]
         self.inpaint_strategy = [self.tr('Resize'), self.tr('Original'), self.tr('Crop')]
         self.themes = [self.tr('Dark'), self.tr('Light')]
         self.alignment = [self.tr("Left"), self.tr("Center"), self.tr("Right")]
@@ -64,10 +64,10 @@ class SettingsPageUI(QtWidgets.QWidget):
         self.credential_services = [self.tr("Custom"), self.tr("Deepseek"), self.tr("Open AI GPT"), self.tr("Microsoft Azure"), self.tr("Google Cloud"), 
                                     self.tr("Google Gemini"), self.tr("DeepL"), self.tr("Anthropic Claude"), self.tr("Yandex"), self.tr("Grok"), self.tr("Cerebras")]
         
-        self.supported_translators = [self.tr("GPT-4.1"), self.tr("GPT-4.1-mini"), self.tr("DeepL"), 
+        self.supported_translators = [self.tr("GPT-5"), self.tr("GPT-5-mini"), self.tr("DeepL"), 
                                     self.tr("Claude-4.5-Sonnet"), self.tr("Claude-4.5-Haiku"), self.tr("Gemini-Flash-Lite-Latest"),
                                     self.tr("Gemini-Flash-Latest"), self.tr("Gemini-2.5-Pro"), self.tr("Yandex"), self.tr("Google Translate"),
-                                    self.tr("Microsoft Translator"), self.tr("Deepseek-v3"), self.tr("Grok-4-fast-non-reasoning"), self.tr("Custom"), self.tr("Cerebras")]
+                                    self.tr("Microsoft Translator"), self.tr("Deepseek-Chat"), self.tr("Grok-4-fast-non-reasoning"), self.tr("Custom"), self.tr("Cerebras")]
         
         self.languages = ['English', '한국어', 'Français', '日本語', 
          '简体中文', '繁體中文', 'русский', 'Deutsch', 
@@ -97,9 +97,9 @@ class SettingsPageUI(QtWidgets.QWidget):
 
             # Translator mappings
             self.tr("Custom"): "Custom",
-            self.tr("Deepseek-v3"): "Deepseek-v3",
-            self.tr("GPT-4.1"): "GPT-4.1",
-            self.tr("GPT-4.1-mini"): "GPT-4.1-mini",
+            self.tr("Deepseek-Chat"): "Deepseek-Chat",
+            self.tr("GPT-5"): "GPT-5",
+            self.tr("GPT-5-mini"): "GPT-5-mini",
             self.tr("DeepL"): "DeepL",
             self.tr("Claude-4.5-Sonnet"): "Claude-4.5-Sonnet",
             self.tr("Claude-4.5-Haiku"): "Claude-4.5-Haiku",

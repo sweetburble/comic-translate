@@ -227,7 +227,7 @@ def validate_ocr(main_page, source_lang):
             return False
 
     # GPT-based OCR
-    elif ocr_tool == tr('GPT-4.1-mini'):
+    elif ocr_tool == tr('GPT-5-mini'):
         service = tr('Open AI GPT')
         if not has_access(service, 'api_key'):
             Messages.show_signup_or_credentials_error(main_page)

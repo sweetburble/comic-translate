@@ -9,12 +9,12 @@ from .settings_ui import SettingsPageUI
 
 # Dictionary to map old model names to the newest versions in settings
 OCR_MIGRATIONS = {
-    "GPT-4o": "GPT-4.1-mini",
+    "GPT-4o": "GPT-5-mini",
 }
 
 TRANSLATOR_MIGRATIONS = {
-    "GPT-4o":              "GPT-4.1",
-    "GPT-4o mini":         "GPT-4.1-mini",
+    "GPT-4o":              "GPT-5",
+    "GPT-4o mini":         "GPT-5-mini",
     "Gemini-2.0-Flash":    "Gemini-Flash-Latest",
     "Gemini-2.0-Pro":      "Gemini-Flash-Latest",
     "Gemini-2.5-Pro":      "Gemini-Flash-Latest",
@@ -267,7 +267,7 @@ class SettingsPage(QtWidgets.QWidget):
 
         # Load tools settings
         settings.beginGroup('tools')
-        raw_translator = settings.value('translator', 'GPT-4.1')
+        raw_translator = settings.value('translator', 'GPT-5')
         translator = TRANSLATOR_MIGRATIONS.get(raw_translator, raw_translator)
         translated_translator = self.ui.reverse_mappings.get(translator, translator)
         self.ui.translator_combo.setCurrentText(translated_translator)

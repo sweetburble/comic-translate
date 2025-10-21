@@ -11,9 +11,9 @@ import imkit as imk
 
 MODEL_MAP = {
     "Custom": "",  
-    "Deepseek-v3": "deepseek-chat", 
-    "GPT-4.1": "gpt-4.1",
-    "GPT-4.1-mini": "gpt-4.1-mini",
+    "Deepseek-Chat": "deepseek-chat", 
+    "GPT-5": "gpt-5-2025-08-07",
+    "GPT-5-mini": "gpt-5-mini-2025-08-07",
     "Claude-4.5-Sonnet": "claude-sonnet-4-5-20250929",
     "Claude-3.5-Haiku": "claude-haiku-4-5-20251001",
     "Gemini-Flash-Lite-Latest": "gemini-flash-lite-latest",
