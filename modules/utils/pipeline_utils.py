@@ -38,6 +38,10 @@ language_codes = {
     "Hungarian": "hu",
     "Finnish": "fi",
     "Arabic": "ar",
+    "Czech": "cs",
+    "Persian": "fa",
+    "Romanian": "ro",
+    "Mongolian": "mn",
     }
 
 def get_layout_direction(language: str) -> Qt.LayoutDirection:
@@ -109,6 +113,10 @@ def generate_mask(img: np.ndarray, blk_list: list[TextBlock], default_padding: i
     LONG_EDGE = 2048
 
     for blk in blk_list:
+        # Skip blocks with no text and no translation
+        if not blk.text and not blk.translation:
+            continue
+        
         bboxes = get_inpaint_bboxes(blk.xyxy, img)
         blk.inpaint_bboxes = bboxes
         if bboxes is None or len(bboxes) == 0:
